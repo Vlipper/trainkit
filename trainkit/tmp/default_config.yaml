@@ -49,6 +49,7 @@ hyper_params:
       cooldown: 3
       # clr kwargs
 #      clr_step_size_up: 2
+#      clr_step_size_down: 2
 #      mode: 'triangular2'
 #      cycle_momentum: False
       # one_cycle kwargs

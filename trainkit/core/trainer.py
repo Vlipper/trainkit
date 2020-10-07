@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from trainkit.core.logger import LogWriter
 from trainkit.core.lr_finder import LRfinder
-from trainkit.utils.trainer_utils import LRSchedulerMixin, OptimizerFactory
+from trainkit.utils.trainer_utils import LRSchedulerFactory, OptimizerFactory
 
 if TYPE_CHECKING:
     from trainkit.tmp.models import NetBaseMixin
@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 # from tensorboard.backend.event_processing import event_accumulator
 
 
-class Trainer(LRSchedulerMixin):
+class Trainer:
     log_writer: Optional[LogWriter]
 
     def __init__(self, model: 'NetBaseMixin', run_params: dict, hyper_params: dict):
@@ -84,9 +84,12 @@ class Trainer(LRSchedulerMixin):
             self.run_find_lr()
 
         self.batches_per_epoch = len(self.train_loader)  # is needed for cyclic schedulers
-        self.lr_scheduler = self.get_scheduler(self.optimizer,
-                                               self.hyper_params['lr_scheduler']['name'],
-                                               self.hyper_params['lr_scheduler']['kwargs'])
+        self.lr_scheduler = LRSchedulerFactory.get_scheduler(
+            optimizer=self.optimizer,
+            num_epochs=self.num_epochs,
+            batches_per_epoch=self.batches_per_epoch,
+            lr_scheduler_name=self.hyper_params['lr_scheduler']['name'],
+            lr_scheduler_kwargs=self.hyper_params['lr_scheduler']['kwargs'])
         self.log_writer = LogWriter(self.tboard_dir_path, self.model_name)
 
     def optim_wrapper(self, train_step: Callable) -> Callable:

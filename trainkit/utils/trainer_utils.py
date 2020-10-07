@@ -1,5 +1,3 @@
-from typing import Optional
-
 import torch.nn as nn
 from torch.optim import AdamW, SGD
 from torch.optim.lr_scheduler import CyclicLR, ReduceLROnPlateau
@@ -21,19 +19,21 @@ class OptimizerFactory:
         return optimizer
 
 
-class LRSchedulerMixin:
-    num_epochs: Optional[int]
-    batches_per_epoch: Optional[int]
+class LRSchedulerFactory:
+    @classmethod
+    def get_scheduler(cls, optimizer: Optimizer, num_epochs: int, batches_per_epoch: int,
+                      lr_scheduler_name: str, lr_scheduler_kwargs: dict):
+        kwargs_mod = lr_scheduler_kwargs.copy()
+        kwargs_mod.update({'num_epochs': num_epochs, 'batches_per_epoch': batches_per_epoch})
 
-    def get_scheduler(self, optimizer: Optimizer, lr_scheduler_name: str, lr_scheduler_kwargs: dict):
         if lr_scheduler_name is None:
             lr_scheduler = None
         elif lr_scheduler_name == 'rop':
-            lr_scheduler = self.__get_rop_scheduler(optimizer, **lr_scheduler_kwargs)
+            lr_scheduler = cls.__get_rop_scheduler(optimizer, **kwargs_mod)
         elif lr_scheduler_name == 'clr':
-            lr_scheduler = self.__get_clr_scheduler(optimizer, **lr_scheduler_kwargs)
+            lr_scheduler = cls.__get_clr_scheduler(optimizer, **kwargs_mod)
         elif lr_scheduler_name == 'cst_onecycle':
-            lr_scheduler = self.__get_cst_onecycle_scheduler(optimizer, **lr_scheduler_kwargs)
+            lr_scheduler = cls.__get_cst_onecycle_scheduler(optimizer, **kwargs_mod)
         else:
             raise ValueError('Given lr_scheduler_name: "{}" is not known'.format(lr_scheduler_name))
 
@@ -54,9 +54,12 @@ class LRSchedulerMixin:
 
         return lr_scheduler
 
-    def __get_clr_scheduler(self, optimizer, min_lr, max_lr, **kwargs):
-        clr_stepsize_up = int(kwargs['clr_step_size_up'] * self.batches_per_epoch)
-        clr_stepsize_down = int(kwargs['clr_step_size_down'] * self.batches_per_epoch)
+    @staticmethod
+    def __get_clr_scheduler(optimizer, min_lr, max_lr, **kwargs):
+        clr_stepsize_up = int(kwargs['clr_step_size_up'] * kwargs['batches_per_epoch'])
+        clr_stepsize_down = int(kwargs['clr_step_size_down'] * kwargs['batches_per_epoch'])
+        clr_stepsize_up = clr_stepsize_up if clr_stepsize_up > 0 else 1
+        clr_stepsize_down = clr_stepsize_up if clr_stepsize_down > 0 else 1
 
         lr_scheduler = CyclicLR(optimizer, base_lr=min_lr, max_lr=max_lr,
                                 step_size_up=clr_stepsize_up, step_size_down=clr_stepsize_down,
@@ -65,9 +68,10 @@ class LRSchedulerMixin:
 
         return lr_scheduler
 
-    def __get_cst_onecycle_scheduler(self, optimizer, max_lr, **kwargs):
-        lr_scheduler = CstmOneCycleLR(optimizer, max_lr=max_lr, epochs=self.num_epochs,
-                                      steps_per_epoch=self.batches_per_epoch,
+    @staticmethod
+    def __get_cst_onecycle_scheduler(optimizer, max_lr, **kwargs):
+        lr_scheduler = CstmOneCycleLR(optimizer, max_lr=max_lr, epochs=kwargs['num_epochs'],
+                                      steps_per_epoch=kwargs['batches_per_epoch'],
                                       step_frac_up=kwargs['step_frac_up'],
                                       step_frac_down=kwargs['step_frac_down'],
                                       init_lr_div_factor=kwargs['init_lr_div_factor'],
