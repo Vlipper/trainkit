@@ -59,7 +59,7 @@ class LRSchedulerFactory:
         clr_stepsize_up = int(kwargs['clr_step_size_up'] * kwargs['batches_per_epoch'])
         clr_stepsize_down = int(kwargs['clr_step_size_down'] * kwargs['batches_per_epoch'])
         clr_stepsize_up = clr_stepsize_up if clr_stepsize_up > 0 else 1
-        clr_stepsize_down = clr_stepsize_up if clr_stepsize_down > 0 else 1
+        clr_stepsize_down = clr_stepsize_down if clr_stepsize_down > 0 else 1
 
         lr_scheduler = CyclicLR(optimizer, base_lr=min_lr, max_lr=max_lr,
                                 step_size_up=clr_stepsize_up, step_size_down=clr_stepsize_down,
