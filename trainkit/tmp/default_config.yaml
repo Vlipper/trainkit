@@ -14,6 +14,7 @@ run_params:
   find_lr:
     is_flr: False
     is_flr_only: False
+    is_apply_flr_optim_borders: False
     flr_min_lr: 1.0e-7
     flr_max_lr: 9.0e-1
     flr_out_mode: 'save'

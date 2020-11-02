@@ -40,14 +40,8 @@ class LRSchedulerFactory:
         return lr_scheduler
 
     @staticmethod
-    def __get_rop_scheduler(optimizer, min_lr, max_lr, mode, factor, threshold, threshold_mode,
-                            patience, cooldown,
+    def __get_rop_scheduler(optimizer, mode, factor, threshold, threshold_mode, patience, cooldown,
                             **_ignored):
-        # init new lr between min_lr and max_lr
-        rop_init_lr = min_lr + 0.5 * (max_lr - min_lr)
-        for group in optimizer.param_groups:
-            group['lr'] = rop_init_lr
-
         lr_scheduler = ReduceLROnPlateau(optimizer=optimizer, mode=mode, factor=factor,
                                          threshold=threshold, threshold_mode=threshold_mode,
                                          patience=patience, cooldown=cooldown)

@@ -58,20 +58,60 @@ class Trainer:
         self.best_val_metrics = 100 if run_params['general']['metrics_comparison_mode'] == 'min' else -100
         self.log_writer = None
 
-    def run_find_lr(self):
+    @staticmethod
+    def __calc_optimal_lr(min_lr: float, max_lr: float) -> float:
+        """
+        Calculate optimal learning rate between min and max borders from find_lr
+
+        Args:
+            min_lr: minimal learning rate border
+            max_lr: maximum learning rate border
+
+        Returns:
+            learning rate between min and max borders
+        """
+        # init new lr between min_lr and max_lr
+        optimal_lr = min_lr + 0.5 * (max_lr - min_lr)
+
+        return optimal_lr
+
+    def _apply_new_lr(self, new_lr: float) -> None:
+        """
+        Update learning rate value in hyper params, init new optimizer and cache new optimizer state
+
+        Args:
+            new_lr: learning rate to apply
+        """
+        self.hyper_params['optimizer']['kwargs'].update({'lr': new_lr})
+
+        self.optimizer = OptimizerFactory.get_optimizer(self.model,
+                                                        self.hyper_params['optimizer']['name'],
+                                                        self.hyper_params['optimizer']['kwargs'])
+
+        self.cache.update({'optimizer_state': deepcopy(self.optimizer.state_dict())})
+
+    def run_find_lr(self) -> None:
+        """
+        Run find learning rate process, find optimal lr borders and save/plot figure.
+        If 'is_apply_flr_optim_borders' in config is True, then calc and apply optimal lr and
+        update min/max borders into lr scheduler kwargs.
+        """
         lr_finder = LRfinder(trainer=self, logs_path=self.find_lr_params['flr_path'],
                              min_lr=self.find_lr_params['flr_min_lr'],
                              max_lr=self.find_lr_params['flr_max_lr'])
         lr_finder.range_test()
         lr_finder.plot(self.find_lr_params['flr_out_mode'])
 
-        # min_lr, max_lr = lr_finder.find_optimal_borders(right_seq_len_threshold=1)
-        # print('min/max LRs found: {:.2e}, {:.2e}'.format(min_lr, max_lr))
-        # self.update_params({'lr': min_lr, 'max_lr': max_lr})
+        min_lr, max_lr = lr_finder.find_optimal_borders(right_seq_len_threshold=1)
+        optimal_lr = self.__calc_optimal_lr(min_lr, max_lr)
+        print('min/max/optimal LRs: {:.2e}, {:.2e}, {:.2e}'.format(min_lr, max_lr, optimal_lr))
 
         if self.find_lr_params['is_flr_only']:
             sys.exit()
 
+        if self.find_lr_params['is_apply_flr_optim_borders']:
+            self._apply_new_lr(optimal_lr)
+            self.hyper_params['lr_scheduler']['kwargs'].update({'min_lr': min_lr, 'max_lr': max_lr})
         del lr_finder
         gc.collect()
 
