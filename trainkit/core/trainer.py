@@ -13,7 +13,7 @@ from trainkit.core.lr_finder import LRFinder
 from trainkit.utils.trainer_utils import LRSchedulerFactory, OptimizerFactory
 
 if TYPE_CHECKING:
-    from trainkit.tmp.models import NetBaseMixin
+    from trainkit.core.models import BaseNet
 
 # from tensorboard.backend.event_processing import event_accumulator
 
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 class Trainer:
     log_writer: Optional[LogWriter]
 
-    def __init__(self, model: 'NetBaseMixin', run_params: dict, hyper_params: dict):
+    def __init__(self, model: 'BaseNet', run_params: dict, hyper_params: dict):
         self.model = model
         self.run_params = run_params
         self.hyper_params = hyper_params
@@ -127,27 +127,6 @@ class Trainer:
             lr_scheduler_kwargs=self.hyper_params['lr_scheduler']['kwargs'])
         self.log_writer = LogWriter(self.tboard_dir_path, self.model_name)
 
-    def optim_wrapper(self, train_step: Callable) -> Callable:
-        """
-        Decorator for model step with zero_grad, backward, optimizer step
-
-        Args:
-            train_step: model step over batch:
-                forward, calc loss, must return dict with 'backward_loss' to make optim step
-        Returns:
-            Wrapped train_step
-        """
-        def wrapper(*args, **kwargs) -> float:
-            self.optimizer.zero_grad()
-            out = train_step(*args, **kwargs)
-            batch_loss = out['loss_backward']
-            batch_loss.backward()
-            self.optimizer.step()
-
-            return batch_loss.item()
-
-        return wrapper
-
     def fit(self, train_dataset: Dataset, val_dataset: Dataset):
         self.train_dataset, self.val_dataset = train_dataset, val_dataset
         self.pretrain_routine()
@@ -212,6 +191,27 @@ class Trainer:
                                           best_loss=self.best_val_loss,
                                           best_metrics=self.best_val_metrics)
             self.log_writer.close()
+
+    def optim_wrapper(self, train_step: Callable) -> Callable:
+        """
+        Decorator for model step with zero_grad, backward, optimizer step
+
+        Args:
+            train_step: model step over batch:
+                forward, calc loss, must return dict with 'backward_loss' to make optim step
+        Returns:
+            Wrapped train_step
+        """
+        def wrapper(*args, **kwargs) -> float:
+            self.optimizer.zero_grad()
+            out = train_step(*args, **kwargs)
+            batch_loss = out['loss_backward']
+            batch_loss.backward()
+            self.optimizer.step()
+
+            return batch_loss.item()
+
+        return wrapper
 
     def save_states(self, save_path: Path, **kwargs):
         state_dict = {'epoch': self.epoch,
