@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from trainkit.core.logger import LogWriter
-from trainkit.core.lr_finder import LRfinder
+from trainkit.core.lr_finder import LRFinder
 from trainkit.utils.trainer_utils import LRSchedulerFactory, OptimizerFactory
 
 if TYPE_CHECKING:
@@ -58,6 +58,27 @@ class Trainer:
         self.best_val_metrics = 100 if run_params['general']['metrics_comparison_mode'] == 'min' else -100
         self.log_writer = None
 
+    def run_find_lr(self) -> None:
+        """
+        Run find learning rate process, find optimal lr borders and save/plot figure.
+        If `apply_optim_borders_flag` in config is True, then calc and apply optimal lr and
+        update min/max borders into lr scheduler kwargs.
+        """
+        lr_finder = LRFinder(trainer=self, **self.find_lr_params['kwargs'])
+        min_lr, max_lr = lr_finder.run(**self.find_lr_params['kwargs'])
+
+        optimal_lr = self.__calc_optimal_lr(min_lr, max_lr)
+        print('min/max/optimal LRs: {:.2e}, {:.2e}, {:.2e}'.format(min_lr, max_lr, optimal_lr))
+
+        if self.find_lr_params['is_flr_only']:
+            sys.exit()
+
+        if self.find_lr_params['apply_optim_borders_flag']:
+            self._apply_new_lr(optimal_lr)
+            self.hyper_params['lr_scheduler']['kwargs'].update({'min_lr': min_lr, 'max_lr': max_lr})
+        del lr_finder
+        gc.collect()
+
     @staticmethod
     def __calc_optimal_lr(min_lr: float, max_lr: float) -> float:
         """
@@ -70,12 +91,11 @@ class Trainer:
         Returns:
             learning rate between min and max borders
         """
-        # init new lr between min_lr and max_lr
-        optimal_lr = min_lr + 0.5 * (max_lr - min_lr)
+        optimal_lr = min_lr + 0.5 * (max_lr - min_lr)  # init new lr between min_lr and max_lr
 
         return optimal_lr
 
-    def _apply_new_lr(self, new_lr: float) -> None:
+    def _apply_new_lr(self, new_lr: float):
         """
         Update learning rate value in hyper params, init new optimizer and cache new optimizer state
 
@@ -89,31 +109,6 @@ class Trainer:
                                                         self.hyper_params['optimizer']['kwargs'])
 
         self.cache.update({'optimizer_state': deepcopy(self.optimizer.state_dict())})
-
-    def run_find_lr(self) -> None:
-        """
-        Run find learning rate process, find optimal lr borders and save/plot figure.
-        If 'is_apply_flr_optim_borders' in config is True, then calc and apply optimal lr and
-        update min/max borders into lr scheduler kwargs.
-        """
-        lr_finder = LRfinder(trainer=self, logs_path=self.find_lr_params['flr_path'],
-                             min_lr=self.find_lr_params['flr_min_lr'],
-                             max_lr=self.find_lr_params['flr_max_lr'])
-        lr_finder.range_test()
-        lr_finder.plot(self.find_lr_params['flr_out_mode'])
-
-        min_lr, max_lr = lr_finder.find_optimal_borders(right_seq_len_threshold=1)
-        optimal_lr = self.__calc_optimal_lr(min_lr, max_lr)
-        print('min/max/optimal LRs: {:.2e}, {:.2e}, {:.2e}'.format(min_lr, max_lr, optimal_lr))
-
-        if self.find_lr_params['is_flr_only']:
-            sys.exit()
-
-        if self.find_lr_params['is_apply_flr_optim_borders']:
-            self._apply_new_lr(optimal_lr)
-            self.hyper_params['lr_scheduler']['kwargs'].update({'min_lr': min_lr, 'max_lr': max_lr})
-        del lr_finder
-        gc.collect()
 
     def pretrain_routine(self):
         self.train_loader = self.train_dataset.get_dataloader(is_val=False)
@@ -142,7 +137,7 @@ class Trainer:
         Returns:
             Wrapped train_step
         """
-        def wrapper(*args, **kwargs):
+        def wrapper(*args, **kwargs) -> float:
             self.optimizer.zero_grad()
             out = train_step(*args, **kwargs)
             batch_loss = out['loss_backward']

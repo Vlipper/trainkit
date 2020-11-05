@@ -14,11 +14,10 @@ run_params:
   find_lr:
     is_flr: False
     is_flr_only: False
-    is_apply_flr_optim_borders: False
-    flr_min_lr: 1.0e-7
-    flr_max_lr: 9.0e-1
-    flr_out_mode: 'save'
-    flr_path: 'runs/find_lr'
+    apply_optim_borders_flag: False
+    kwargs:
+      out_mode: 'save'
+      logs_path: 'runs/find_lr'
   dataset:
     train_description_csv_path: 'data/mod/rand_study_split_label_pe_train_sample.csv'
     val_description_csv_path: 'data/mod/rand_study_split_label_pe_val_sample.csv'
