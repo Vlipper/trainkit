@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -42,7 +42,7 @@ class DatasetBaseMixin(DatasetProperties, Dataset):
         super().__init__()
 
         self.desc = self.__read_data_description(kwargs['description_csv_path'])
-        self.sampler = kwargs['sampler']
+        # self.sampler = kwargs['sampler']
 
         self.num_workers = run_params['num_workers']
 
@@ -52,11 +52,11 @@ class DatasetBaseMixin(DatasetProperties, Dataset):
     def __len__(self):
         return len(self.desc)
 
-    def __getitem__(self, idx: Union[int, Tuple[int, ...]]):
+    def __getitem__(self, idx: int):
         raise NotImplementedError
 
     @staticmethod
-    def __read_data_description(desc_path: Path) -> list:
+    def __read_data_description(desc_path: Path) -> np.ndarray:
         desc = pd.read_csv(desc_path)
         desc = desc.values
 
@@ -73,15 +73,10 @@ class DatasetBaseMixin(DatasetProperties, Dataset):
 
         return img_mod
 
-    def get_dataloader(self):
-        # shuffle = False if is_val else True
-        # shuffle=shuffle,
-        loader = DataLoader(dataset=self, batch_size=self.batch_size, sampler=self.sampler,
+    def get_dataloader(self, is_val: bool):
+        shuffle = False if is_val else True
+        # sampler=self.sampler,
+        loader = DataLoader(dataset=self, batch_size=self.batch_size, shuffle=shuffle,
                             num_workers=self.num_workers)
 
         return loader
-
-
-# class BaseSet(DatasetBaseMixin):
-#     def __init__(self, run_params: dict, hyper_params: dict, **kwargs):
-#         super().__init__(run_params, hyper_params, **kwargs)

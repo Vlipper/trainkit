@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Callable, Optional, TYPE_CHECKING
 
 import torch
-from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from trainkit.core.logger import LogWriter
@@ -14,12 +13,18 @@ from trainkit.utils.trainer_utils import LRSchedulerFactory, OptimizerFactory
 
 if TYPE_CHECKING:
     from trainkit.core.models import BaseNet
+    from trainkit.core.data import BaseDataset
+    from torch.utils.data import DataLoader
 
 # from tensorboard.backend.event_processing import event_accumulator
 
 
 class Trainer:
     log_writer: Optional[LogWriter]
+    train_dataset: 'BaseDataset'
+    val_dataset: 'BaseDataset'
+    train_loader: 'DataLoader'
+    val_loader: 'DataLoader'
 
     def __init__(self, model: 'BaseNet', run_params: dict, hyper_params: dict):
         self.model = model
@@ -51,11 +56,11 @@ class Trainer:
         self.epoch, self.n_iter_train = 0, 0
         self.batches_per_epoch = None
         self.lr_scheduler = None
-        self.train_dataset, self.val_dataset = None, None
-        self.train_loader, self.val_loader = None, None
+        # self.train_dataset, self.val_dataset = None, None
+        # self.train_loader, self.val_loader = None, None
         self.val_loss, self.val_metrics = None, None
-        self.best_val_loss = 100
-        self.best_val_metrics = 100 if run_params['general']['metrics_comparison_mode'] == 'min' else -100
+        self.best_val_loss = 10000
+        self.best_val_metrics = 10000 if run_params['general']['metrics_comparison_mode'] == 'min' else -10000
         self.log_writer = None
 
     def run_find_lr(self) -> None:
@@ -127,7 +132,7 @@ class Trainer:
             lr_scheduler_kwargs=self.hyper_params['lr_scheduler']['kwargs'])
         self.log_writer = LogWriter(self.tboard_dir_path, self.model_name)
 
-    def fit(self, train_dataset: Dataset, val_dataset: Dataset):
+    def fit(self, train_dataset: 'BaseDataset', val_dataset: 'BaseDataset'):
         self.train_dataset, self.val_dataset = train_dataset, val_dataset
         self.pretrain_routine()
 
