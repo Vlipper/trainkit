@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, TYPE_CHECKING
+from typing import Any, Dict, TYPE_CHECKING
 
 import numpy as np
 from torch.nn import Module
@@ -15,13 +15,32 @@ class BaseOperationsMixin(ABC):
         pass
 
     @abstractmethod
-    def batch_step(self, *args, **kwargs) -> Dict[str, 'torch.Tensor']:
+    def batch_step(self, batch_idx: int,
+                   batch: Any) -> Dict[str, 'torch.Tensor']:
         """
-        Method must receive data batch (cpu), forward it, calc loss/metrics and save them into
-        lists: batch_obj_losses, batch_obj_metrics.
+        Method receives batch (on CPU) and its index, then it must calc loss/metrics and
+        save them into lists: batch_obj_losses, batch_obj_metrics.
+
+        Example:
+            Output may looks like below.
+            It saves loss and metrics per object to aggregate them at the end of epoch later
+            >>> losses, metrics = torch.zeros(10), torch.zeros(10)
+            >>> batch_loss = losses.mean()
+
+            >>> if batch_idx == 0:
+            >>>     self.batch_obj_losses, self.batch_obj_metrics = [], []
+            >>> self.batch_obj_losses.extend(losses)
+            >>> self.batch_obj_metrics.extend(metrics)
+            >>> out = {'loss_backward': batch_loss}
+            >>> return out
+
+        Args:
+            batch_idx: index of given batch
+            batch: batch of data (`torch.Tensor`), may be wrapped in dict, list
 
         Returns:
-            Arbitrary dict, but it must contain key `loss_backward` with `torch.Tensor` value.
+            Arbitrary dict, but it must contain key `loss_backward` with backwardable value of type
+            `torch.Tensor`
         """
         pass
 
@@ -50,7 +69,8 @@ class BaseNet(BaseOperationsMixin, Module):
         self.device = device
 
     @abstractmethod
-    def batch_step(self, *args, **kwargs) -> Dict[str, 'torch.Tensor']:
+    def batch_step(self, batch_idx: int,
+                   batch: Any) -> Dict[str, 'torch.Tensor']:
         pass
 
     def train_preps(self, trainer: 'Trainer'):
