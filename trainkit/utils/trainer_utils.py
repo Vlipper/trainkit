@@ -8,7 +8,9 @@ from trainkit.core.lr_scheduler import CstmOneCycleLR
 
 class OptimizerFactory:
     @staticmethod
-    def get_optimizer(model: nn.Module, optimizer_name: str, optimizer_kwargs: dict):
+    def get_optimizer(model: nn.Module,
+                      optimizer_name: str,
+                      optimizer_kwargs: dict) -> Optimizer:
         if optimizer_name == 'sgd':
             optimizer = SGD(model.parameters(), **optimizer_kwargs)
         elif optimizer_name == 'adamw':
@@ -21,8 +23,11 @@ class OptimizerFactory:
 
 class LRSchedulerFactory:
     @classmethod
-    def get_scheduler(cls, optimizer: Optimizer, num_epochs: int, batches_per_epoch: int,
-                      lr_scheduler_name: str, lr_scheduler_kwargs: dict):
+    def get_scheduler(cls, optimizer: Optimizer,
+                      num_epochs: int,
+                      batches_per_epoch: int,
+                      lr_scheduler_name: str,
+                      lr_scheduler_kwargs: dict):
         kwargs = lr_scheduler_kwargs.copy()
         kwargs.update({'num_epochs': num_epochs, 'batches_per_epoch': batches_per_epoch})
 

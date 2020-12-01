@@ -13,7 +13,7 @@ from trainkit.utils.trainer_utils import LRSchedulerFactory, OptimizerFactory
 
 if TYPE_CHECKING:
     from trainkit.core.models import BaseNet
-    from trainkit.core.data import BaseDataset
+    from trainkit.datasets.base import BaseDataset
     from torch.utils.data import DataLoader
 
 # from tensorboard.backend.event_processing import event_accumulator
@@ -22,11 +22,13 @@ if TYPE_CHECKING:
 class Trainer:
     log_writer: Optional[LogWriter]
     train_dataset: 'BaseDataset'
-    val_dataset: 'BaseDataset'
     train_loader: 'DataLoader'
+    val_dataset: 'BaseDataset'
     val_loader: 'DataLoader'
 
-    def __init__(self, model: 'BaseNet', run_params: dict, hyper_params: dict):
+    def __init__(self, model: 'BaseNet',
+                 run_params: dict,
+                 hyper_params: dict):
         self.model = model
         self.run_params = run_params
         self.hyper_params = hyper_params
@@ -72,7 +74,7 @@ class Trainer:
         lr_finder = LRFinder(trainer=self, **self.find_lr_params['kwargs'])
         min_lr, max_lr = lr_finder.run(**self.find_lr_params['kwargs'])
 
-        optimal_lr = self.__calc_optimal_lr(min_lr, max_lr)
+        optimal_lr = self._calc_optimal_lr(min_lr, max_lr)
         print('min/max/optimal LRs: {:.2e}, {:.2e}, {:.2e}'.format(min_lr, max_lr, optimal_lr))
 
         if self.find_lr_params['is_flr_only']:
@@ -85,7 +87,8 @@ class Trainer:
         gc.collect()
 
     @staticmethod
-    def __calc_optimal_lr(min_lr: float, max_lr: float) -> float:
+    def _calc_optimal_lr(min_lr: float,
+                         max_lr: float) -> float:
         """
         Calculate optimal learning rate between min and max borders from find_lr
 
