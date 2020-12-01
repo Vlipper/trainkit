@@ -142,6 +142,7 @@ class Trainer:
         epoch_tqdm = tqdm(total=self.num_epochs, desc='epochs', leave=False)
         for self.epoch in range(self.num_epochs):
             # train part
+            self.model.train()
             for batch_idx, batch in tqdm(enumerate(self.train_loader),
                                          total=len(self.train_loader),
                                          desc='train', leave=False):
@@ -158,7 +159,6 @@ class Trainer:
                                              total=len(self.val_loader),
                                              desc='val', leave=False):
                     self.model.batch_step(batch_idx, batch)
-            self.model.train()
             self.model.on_val_part_end()
 
             # save states
