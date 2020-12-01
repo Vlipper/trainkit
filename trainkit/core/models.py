@@ -18,12 +18,13 @@ class BaseOperationsMixin(ABC):
     def batch_step(self, batch_idx: int,
                    batch: Any) -> Dict[str, 'torch.Tensor']:
         """
-        Method receives batch (on CPU) and its index, then it must calc loss/metrics and
-        save them into lists: batch_obj_losses, batch_obj_metrics.
+        Method receives batch (dataloaders' unmodified output on CPU) and its index.
+        It must calc loss/metrics and save them into lists: batch_obj_losses, batch_obj_metrics.
 
         Example:
             Output may looks like below.
             It saves loss and metrics per object to aggregate them at the end of epoch later
+
             >>> losses, metrics = torch.zeros(10), torch.zeros(10)
             >>> batch_loss = losses.mean()
 
@@ -57,7 +58,7 @@ class BaseOperationsMixin(ABC):
         pass
 
 
-class BaseNet(BaseOperationsMixin, Module):
+class BaseNet(BaseOperationsMixin, Module, ABC):
     trainer: 'Trainer'
     batch_obj_losses: list
     batch_obj_metrics: list
@@ -67,11 +68,6 @@ class BaseNet(BaseOperationsMixin, Module):
         super().__init__()
 
         self.device = device
-
-    @abstractmethod
-    def batch_step(self, batch_idx: int,
-                   batch: Any) -> Dict[str, 'torch.Tensor']:
-        pass
 
     def train_preps(self, trainer: 'Trainer'):
         self.trainer = trainer
