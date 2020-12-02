@@ -80,6 +80,9 @@ class LRFinder:
                 avg_loss = smooth_beta * avg_loss + (1 - smooth_beta) * batch_loss
 
             if is_early_stopping:
+                if self.best_avg_loss is None or self.best_avg_loss > avg_loss:
+                    self.best_avg_loss = avg_loss
+
                 try:
                     self.__early_stop_check(batch_loss, early_stopping_mult_factor)
                 except StopIteration:
@@ -93,7 +96,8 @@ class LRFinder:
         self.logs.update({key: np.array(val) for key, val in self.logs.items()})
         self.trainer.rollback_states()
 
-    def __early_stop_check(self, current_loss: float, early_stopping_mult_factor: float):
+    def __early_stop_check(self, current_loss: float,
+                           early_stopping_mult_factor: float):
         """
         Checks early stopping condition. In current version it raises `StopIteration` if current
         batch loss is greater than best smoothed batch loss in `early_stopping_mult_factor` times.
@@ -102,9 +106,7 @@ class LRFinder:
             current_loss: loss value of current batch
 
         """
-        if self.best_avg_loss is None:
-            self.best_avg_loss = current_loss
-        elif current_loss > (early_stopping_mult_factor * self.best_avg_loss):
+        if current_loss > (early_stopping_mult_factor * self.best_avg_loss):
             raise StopIteration
 
     def find_optimal_lr_borders(self, min_left_seq_len: int = 5,
@@ -215,7 +217,8 @@ class LRFinder:
             return right_border_idx
 
     @staticmethod
-    def __find_monotony(gains_over_threshold_idxs: np.ndarray, min_sequence_len: int) -> int:
+    def __find_monotony(gains_over_threshold_idxs: np.ndarray,
+                        min_sequence_len: int) -> int:
         """
         Find index of element from which loss began to change monotonically.
 
