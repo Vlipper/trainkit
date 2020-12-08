@@ -3,6 +3,7 @@ run_params:
     proj_root: '/home/iilegeza/projects/rsna_pulmonary_embolism'
     ## all other path must be relative to proj_root
     tboard_path: 'runs/tboard_logs'
+    hparam_path: 'runs/hparam_logs'
     models_path: 'runs/models'
   general:
     model_name: 'dttm'
@@ -19,9 +20,9 @@ run_params:
       out_mode: 'save'
       logs_path: 'runs/find_lr'
   dataset:
-    train_description_csv_path: 'data/mod/rand_study_split_label_pe_train_sample.csv'
-    val_description_csv_path: 'data/mod/rand_study_split_label_pe_val_sample.csv'
-    img_dir_path: 'data/mod/128x128'
+    train_info_csv_path: 'data/mod/rand_study_split_label_pe_train_sample.csv'
+    val_info_csv_path: 'data/mod/rand_study_split_label_pe_val_sample.csv'
+    data_dir_path: 'data/mod/128x128'
     num_workers: 2
     file_ext: 'png'
 

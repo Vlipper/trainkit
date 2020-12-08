@@ -14,6 +14,7 @@ def main(**kwargs):
     Path(root_dir, 'runs', 'find_lr').mkdir(parents=True)
     Path(root_dir, 'runs', 'models').mkdir(parents=True)
     Path(root_dir, 'runs', 'tboard_logs').mkdir(parents=True)
+    Path(root_dir, 'runs', 'hparam_logs').mkdir(parents=True)
 
     # other dirs in root
     Path(root_dir, 'insides').mkdir()

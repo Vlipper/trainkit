@@ -36,6 +36,7 @@ class Trainer:
         # paths params
         self.models_dir_path = run_params['paths']['models_path']
         self.tboard_dir_path = run_params['paths']['tboard_path']
+        self.hparam_dir_path = run_params['paths']['hparam_path']
 
         # general params
         self.model_name = run_params['general']['model_name']
@@ -133,7 +134,11 @@ class Trainer:
             batches_per_epoch=self.batches_per_epoch,
             lr_scheduler_name=self.hyper_params['lr_scheduler']['name'],
             lr_scheduler_kwargs=self.hyper_params['lr_scheduler']['kwargs'])
-        self.log_writer = LogWriter(self.tboard_dir_path, self.model_name)
+
+        self.log_writer = LogWriter(tboard_dir_path=self.tboard_dir_path,
+                                    hparam_dir_path=self.hparam_dir_path,
+                                    model_name=self.model_name)
+        self.log_writer.write_hparams(self.hyper_params)
 
     def fit(self, train_dataset: 'BaseDataset', val_dataset: 'BaseDataset'):
         self.train_dataset, self.val_dataset = train_dataset, val_dataset
@@ -194,10 +199,12 @@ class Trainer:
             epoch_tqdm.update()
         epoch_tqdm.close()
 
-        if self.log_writer is not None:
-            self.log_writer.write_hparams(h_params=self.hyper_params,
-                                          best_loss=self.best_val_loss,
-                                          best_metrics=self.best_val_metrics)
+        if self.log_writer is not None:  # ToDo: drop this condition
+            hparams = self.hyper_params.copy()
+            hparams.update({'best_loss': self.best_val_loss,
+                            'best_metrics': self.best_val_metrics})
+
+            self.log_writer.write_hparams(hparams=hparams)
             self.log_writer.close()
 
     def optim_wrapper(self, train_step: Callable) -> Callable:
@@ -348,7 +355,7 @@ class CrossVal:
 #                 folds_vals = [fold_tag_val_dict['fold_{}'.format(fold)][tag][event_idx][1]
 #                               for fold in range(cv_size)]
 #                 step = fold_tag_val_dict['fold_0'][tag][event_idx][0]
-#                 self.write_logs(tag, np.mean(folds_vals), step)
+#                 self.write_scalars(tag, np.mean(folds_vals), step)
 #
 #         # write hyperparams logs
 #         if metrics_dict is None:
