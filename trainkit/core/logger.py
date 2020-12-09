@@ -33,10 +33,11 @@ class LogWriter:
         unnested_params = {}
 
         for key, val in hparams.items():
+            mod_key = key if prev_key is None else f'{prev_key}/{key}'
+
             if isinstance(val, dict):
-                unnested_params.update(cls.__unpack_hparams(hparams=val, prev_key=key))
+                unnested_params.update(cls.__unpack_hparams(hparams=val, prev_key=mod_key))
             else:
-                mod_key = key if prev_key is None else f'{prev_key}/{key}'
                 unnested_params.update({mod_key: val})
 
         return unnested_params
