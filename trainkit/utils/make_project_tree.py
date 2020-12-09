@@ -10,7 +10,7 @@ Examples:
 
     Ex.2:
     >>> python -m trainkit.utils.make_project_tree
-        -c 'custom_dir1' 'custom_dir2/in_dir2_1'
+    >>>     -c 'custom_dir1' 'custom_dir2/in_dir2_1'
 """
 
 import argparse

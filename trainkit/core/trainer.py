@@ -201,8 +201,9 @@ class Trainer:
 
         if self.log_writer is not None:  # ToDo: drop this condition
             hparams = self.hyper_params.copy()
-            hparams.update({'best_loss': self.best_val_loss,
-                            'best_metrics': self.best_val_metrics})
+            results = {'best_loss': self.best_val_loss,
+                       'best_metrics': self.best_val_metrics}
+            hparams.update({'results': results})
 
             self.log_writer.write_hparams(hparams=hparams)
             self.log_writer.close()
