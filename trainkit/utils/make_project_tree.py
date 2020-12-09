@@ -1,3 +1,18 @@
+"""Creates project's dir tree inside current working directory (cwd).
+
+Args:
+    custom_dirs: sequence of strings (paths) to create (relative to cwd).
+        Possibly to pass through --custom_dirs or -c.
+
+Examples:
+    Ex.1:
+    >>> python -m trainkit.utils.make_project_tree
+
+    Ex.2:
+    >>> python -m trainkit.utils.make_project_tree
+        -c 'custom_dir1' 'custom_dir2/in_dir2_1'
+"""
+
 import argparse
 from pathlib import Path
 
@@ -20,20 +35,22 @@ def main(**kwargs):
     Path(root_dir, 'insides').mkdir()
     Path(root_dir, 'notebooks').mkdir()
     Path(root_dir, 'preds').mkdir()
-    if not Path(root_dir, 'comp_utils').exists():
-        Path(root_dir, 'comp_utils').mkdir()
-    Path(root_dir, 'comp_utils', 'preps').mkdir()
 
     # custom dirs
     if kwargs.get('custom_dirs') is not None:
-        for cstm_path in kwargs['custom_dirs']:
-            Path(root_dir, cstm_path).mkdir(parents=True)
+        for custom_path in kwargs['custom_dirs']:
+            Path(root_dir, custom_path).mkdir(parents=True)
 
 
-if __name__ == '__main__':
+def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--custom_dirs', '-c', type=str, nargs='*',
                         help='list of custom dirs into root_dir')
-    args_dict = vars(parser.parse_args())
+
+    return vars(parser.parse_args())
+
+
+if __name__ == '__main__':
+    args_dict = parse_args()
 
     main(**args_dict)
