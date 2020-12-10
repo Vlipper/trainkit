@@ -85,16 +85,16 @@ class BaseNet(BaseOperationsMixin, Module, ABC):
     def on_train_part_end(self):
         # write mean values over batches into logs
         self.trainer.log_writer.write_scalar('losses/train',
-                                             np.mean(self.batch_obj_losses),
+                                             np.mean(self.batch_obj_losses).item(),
                                              self.trainer.epoch)
         self.trainer.log_writer.write_scalar('metrics/train',
-                                             np.mean(self.batch_obj_metrics),
+                                             np.mean(self.batch_obj_metrics).item(),
                                              self.trainer.epoch)
 
     def on_val_part_end(self):
         # write mean values over batches into logs
-        self.trainer.val_loss = np.mean(self.batch_obj_losses)
-        self.trainer.val_metrics = np.mean(self.batch_obj_metrics)
+        self.trainer.val_loss = np.mean(self.batch_obj_losses).item()
+        self.trainer.val_metrics = np.mean(self.batch_obj_metrics).item()
 
         self.trainer.log_writer.write_scalar('losses/val',
                                              self.trainer.val_loss,
