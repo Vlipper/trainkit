@@ -73,7 +73,7 @@ class AudioBaseDataset(BaseDataset, ABC):
                 to dB-scaled spectrogram
 
         Returns:
-            Spectrogram, shape=[1 + n_fft/2, n_frames]
+            Spectrogram, shape=[1 + n_fft/2, n_samples]
         """
         spec = np.abs(librosa.stft(audio, **self.spec_kws))
 
@@ -83,20 +83,20 @@ class AudioBaseDataset(BaseDataset, ABC):
         return spec
 
     def _constant_pad_audio(self, audio: np.ndarray,
-                            left_pad_frames: int = None,
-                            right_pad_frames: int = None,
+                            left_pad_samples: int = None,
+                            right_pad_samples: int = None,
                             left_pad_sec: float = None,
                             right_pad_sec: float = None,
                             pad_value: float = 0) -> np.ndarray:
         """Adds paddings before and after given `audio` array.
 
-        Method uses sample rate from `init` to convert pad seconds into audio frames.
-        If pad_frames and pad_sec given than pad_frames will be used.
+        Method uses sample rate from `init` to convert pad seconds into audio samples.
+        If pad_samples and pad_sec given than pad_samples will be used.
 
         Args:
             audio: array with audio signal
-            left_pad_frames: padding size in frames before given audio
-            right_pad_frames: padding size in frames after given audio
+            left_pad_samples: padding size in samples before given audio
+            right_pad_samples: padding size in samples after given audio
             left_pad_sec: padding size in seconds before given audio
             right_pad_sec: padding size in seconds after given audio
             pad_value: padding value
@@ -104,17 +104,17 @@ class AudioBaseDataset(BaseDataset, ABC):
         Returns:
             Padded audio
         """
-        if left_pad_sec is None and left_pad_frames is None:
-            raise ValueError('Param left_pad_sec or left_pad_frames must be given')
-        if right_pad_sec is None and right_pad_frames is None:
-            raise ValueError('Param right_pad_sec or right_pad_frames must be given')
+        if left_pad_sec is None and left_pad_samples is None:
+            raise ValueError('Param "left_pad_sec" or "left_pad_samples" must be given')
+        if right_pad_sec is None and right_pad_samples is None:
+            raise ValueError('Param "right_pad_sec" or "right_pad_samples" must be given')
 
-        if left_pad_frames is None and right_pad_frames is None:
-            left_pad_frames = int(left_pad_sec * self.audio_sr)
-            right_pad_frames = int(right_pad_sec * self.audio_sr)
+        if left_pad_samples is None and right_pad_samples is None:
+            left_pad_samples = int(left_pad_sec * self.audio_sr)
+            right_pad_samples = int(right_pad_sec * self.audio_sr)
 
         audio_padded = np.pad(array=audio,
-                              pad_width=(left_pad_frames, right_pad_frames),
+                              pad_width=(left_pad_samples, right_pad_samples),
                               constant_values=(pad_value, pad_value))
 
         return audio_padded
