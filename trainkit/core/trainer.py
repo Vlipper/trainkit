@@ -64,6 +64,7 @@ class Trainer:
         self.val_loss, self.val_metrics = None, None
         self.best_val_loss = 10000
         self.best_val_metrics = 10000 if run_params['general']['metrics_comparison_mode'] == 'min' else -10000
+        self.best_val_loss_epoch, self.best_val_metrics_epoch = None, None
         self.log_writer = None
 
     def run_find_lr(self) -> None:
@@ -90,8 +91,7 @@ class Trainer:
     @staticmethod
     def _calc_optimal_lr(min_lr: float,
                          max_lr: float) -> float:
-        """
-        Calculate optimal learning rate between min and max borders from find_lr
+        """Calculates optimal learning rate between given min and max borders
 
         Args:
             min_lr: minimal learning rate border
@@ -180,6 +180,7 @@ class Trainer:
                 if self.save_last_state:
                     save_path = Path(self.models_dir_path, self.model_name + '_last_state.pth')
                     self.save_states(save_path, **save_kw)
+
                 # save best state
                 if self.run_params['general']['metrics_comparison_mode'] == 'min':
                     is_new_metrics_better = (self.val_metrics < self.best_val_metrics)
@@ -190,11 +191,15 @@ class Trainer:
 
                 if self.save_best_state and is_new_metrics_better:
                     self.best_val_metrics = self.val_metrics
+                    self.best_val_metrics_epoch = self.epoch
+
                     save_path = Path(self.models_dir_path, self.model_name + '_best_metrics_state.pth')
                     self.save_states(save_path, **save_kw)
+
                 # save best val loss
                 if self.val_loss < self.best_val_loss:
                     self.best_val_loss = self.val_loss
+                    self.best_val_loss_epoch = self.epoch
 
             epoch_tqdm.update()
         epoch_tqdm.close()
@@ -202,7 +207,9 @@ class Trainer:
         if self.log_writer is not None:  # ToDo: drop this condition
             hparams = self.hyper_params.copy()
             results = {'best_loss': self.best_val_loss,
-                       'best_metrics': self.best_val_metrics}
+                       'best_metrics': self.best_val_metrics,
+                       'best_loss_epoch': self.best_val_loss_epoch,
+                       'best_metrics_epoch': self.best_val_metrics_epoch}
             hparams.update({'results': results})
 
             self.log_writer.write_hparams(hparams=hparams)
