@@ -1,8 +1,8 @@
 from abc import ABC
 from typing import TYPE_CHECKING, Tuple
 
-import numpy as np
 import cv2
+import numpy as np
 
 from trainkit.datasets.base import BaseDataset
 from trainkit.datasets.properties import ImageDatasetProperties
@@ -24,35 +24,56 @@ class ImageBaseDataset(ImageDatasetProperties, BaseDataset, ABC):
         self.albu_transforms = albu_transforms
         if hyper_params.get('mean') is not None and hyper_params.get('std') is not None:
             self.mean, self.std = hyper_params['mean'], hyper_params['std']
+        if hyper_params.get('min') is not None and hyper_params.get('max') is not None:
+            self.min, self.max = hyper_params['min'], hyper_params['max']
 
     @staticmethod
     def _read_img(img_path: 'Path') -> np.ndarray:
-        img = cv2.imread(img_path.as_posix())  # shape: (H, W, 3)
+        img = cv2.imread(str(img_path.resolve()))  # shape: (H, W, 3(BGR))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # shape: (H, W, 3(RGB))
         img = img.astype(np.float32)
 
         return img
 
-    def _standard_scale_img(self, img: np.ndarray) -> np.ndarray:
+    def _standard_scale_img(self, img: np.ndarray,
+                            per_image: bool = False) -> np.ndarray:
         """Standardizes image
 
         Args:
             img: image with next axis order: height, width, channels (channels must be last)
+            per_image: whether to standardize img with it's mean and std
+                or global mean/std given through `init`
 
         Returns:
             Standardized image
         """
-        img_mod = (img - self.mean) / self.std
+        if per_image:
+            img_mod = (img - img.mean()) / img.std()
+        else:
+            img_mod = (img - self.mean) / self.std
 
         return img_mod
 
-    @staticmethod
-    def _min_max_scale_img(img: np.ndarray) -> np.ndarray:
-        img_min, img_max = np.min(img), np.max(img)
+    def _min_max_scale_img(self, img: np.ndarray,
+                           per_image: bool = True) -> np.ndarray:
+        """Min-max scales image
 
-        if img_min == img_max:
-            img_mod = img - img_min
+        Args:
+            img: input image
+            per_image: whether to scale img with it's min/max or global min/max given through `init`
+
+        Returns:
+            Min-max scaled image
+        """
+        if per_image:
+            min_val, max_val = np.min(img), np.max(img)
         else:
-            img_mod = (img - img_min) / (img_max - img_min)
+            min_val, max_val = self.min, self.max
+
+        if min_val == max_val:
+            img_mod = img - min_val
+        else:
+            img_mod = (img - min_val) / (max_val - min_val)
 
         return img_mod
 
@@ -97,9 +118,6 @@ class ImageBaseDataset(ImageDatasetProperties, BaseDataset, ABC):
         return img_mod
 
     def _transform_img(self, img: np.ndarray) -> np.ndarray:
-        if self.albu_transforms is None:
-            raise ValueError('Image cannot be transformed without `albu_transforms` attribute')
-
         img_mod = self.albu_transforms(image=img)['image']
 
         return img_mod
