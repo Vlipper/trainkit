@@ -91,7 +91,7 @@ class ImageBaseDataset(ImageDatasetProperties, BaseDataset, ABC):
             (3, 12, 12)
 
         Args:
-            img: image array to mod
+            img: input image
             axes_order: new order of axes
 
         Returns:
@@ -102,18 +102,21 @@ class ImageBaseDataset(ImageDatasetProperties, BaseDataset, ABC):
         return img_mod
 
     @staticmethod
-    def _extend_img_channels(img: np.ndarray) -> np.ndarray:
-        """
-        Adds new shape at the end of `img` array and repeat it three times on new shape
+    def _extend_img_channels(img: np.ndarray,
+                             channels_out: int = 3) -> np.ndarray:
+        """Adds new shape at the end of `img` array and stack it `channels_out` times
 
         Args:
-            img: image array to mod
+            img: input image with expected shape: (H, W)
+            channels_out: number of channels to add
 
         Returns:
             Image array with new shape
         """
-        img_mod = img.reshape(*img.shape, 1)  # shape: (H, W, 3)
-        img_mod = img_mod.repeat(3, -1)  # shape: (H, W, 3)
+        img_mod = img.reshape(*img.shape, 1)  # shape: (H, W, 1)
+
+        if channels_out > 1:
+            img_mod = img_mod.repeat(channels_out, -1)  # shape: (H, W, channels_out)
 
         return img_mod
 
