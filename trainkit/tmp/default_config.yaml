@@ -60,6 +60,6 @@ hyper_params:
 #      min_lr_div_factor: 1000
   dataset:
     batch_size: 2048
-    mean: '0.449,0.449,0.449'
-    std: '0.226,0.226,0.226'
+    mean: [0.449, 0.449, 0.449]
+    std: [0.226, 0.226, 0.226]
   extra: {}
