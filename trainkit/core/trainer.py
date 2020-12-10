@@ -144,7 +144,7 @@ class Trainer:
         self.train_dataset, self.val_dataset = train_dataset, val_dataset
         self.pretrain_routine()
 
-        epoch_tqdm = tqdm(total=self.num_epochs, desc='epochs', leave=False)
+        epoch_tqdm = tqdm(total=self.num_epochs, desc='epochs', leave=True)
         for self.epoch in range(self.num_epochs):
             # train part
             self.model.train()
