@@ -1,6 +1,12 @@
 from abc import ABC, abstractmethod
+from collections import Counter
+from typing import TYPE_CHECKING, Union
 
+import torch
 from torch.utils.data import DataLoader, Dataset
+
+if TYPE_CHECKING:
+    import numpy as np
 
 
 class BaseDataset(Dataset, ABC):
@@ -38,3 +44,21 @@ class BaseDataset(Dataset, ABC):
                             persistent_workers=True)
 
         return loader
+
+    @staticmethod
+    def calc_class_weights(targets: Union['np.ndarray', torch.Tensor]) -> torch.Tensor:
+        """Calculates class weights to balance train dataset
+
+        Args:
+            targets: vector with targets, where `0 <= target[i] < num_classes`
+
+        Returns:
+            Vector of weights
+        """
+        count_dict = Counter(targets)
+        counts = [count_dict[key] for key in range(len(count_dict))]
+        counts = torch.tensor(counts, dtype=torch.float32)
+
+        weights = counts.max() / counts
+
+        return weights
