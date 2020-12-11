@@ -98,9 +98,10 @@ class LRFinder:
 
     def __early_stop_check(self, current_loss: float,
                            early_stopping_mult_factor: float):
-        """
-        Checks early stopping condition. In current version it raises `StopIteration` if current
-        batch loss is greater than best smoothed batch loss in `early_stopping_mult_factor` times.
+        """Checks early stopping condition.
+
+        In current version it raises `StopIteration` if current batch loss is greater than
+        best smoothed batch loss in `early_stopping_mult_factor` times.
 
         Args:
             current_loss: loss value of current batch
@@ -114,8 +115,7 @@ class LRFinder:
                                 min_decreasing_gain: float = 0.999,
                                 min_increasing_gain: float = 1,
                                 **_ignored) -> Tuple[float, float]:
-        """
-        Find left and right borders of learning rate where loss decreasing.
+        """Finds left and right borders of learning rate where loss decreasing.
 
         Args:
             min_left_seq_len: minimum number of loss decreasing events in a row
@@ -151,8 +151,7 @@ class LRFinder:
     def _find_left_lr_border_idx(cls, avg_losses: np.ndarray,
                                  min_decreasing_gain: float,
                                  min_decreasing_sequence_len: int) -> int:
-        """
-        Find left border of optimal learning rate range
+        """Finds left border of optimal learning rate range
 
         Args:
             avg_losses: smoothed loss array
@@ -185,8 +184,7 @@ class LRFinder:
                                   min_increasing_gain: float,
                                   min_increasing_sequence_len: int,
                                   left_border_idx: int) -> int:
-        """
-        Find right border of optimal learning rate range
+        """Finds right border of optimal learning rate range
 
         Args:
             avg_losses: smoothed loss array
@@ -219,8 +217,7 @@ class LRFinder:
     @staticmethod
     def __find_monotony(gains_over_threshold_idxs: np.ndarray,
                         min_sequence_len: int) -> int:
-        """
-        Find index of element from which loss began to change monotonically.
+        """Finds index of element from which loss began to change monotonically
 
         Args:
             gains_over_threshold_idxs: array with indices where ratio of current loss to
@@ -248,8 +245,7 @@ class LRFinder:
     def plot(self, out_mode: str,
              logs_path: Optional[Path] = None,
              **_ignored):
-        """
-        Plots figure (lr, loss axis) with lr range test results.
+        """Plots figure with lr range test results (axes: lr, loss)
 
         Args:
             out_mode: "save" or "show" lr-loss figure
@@ -266,14 +262,15 @@ class LRFinder:
         plt.semilogx(lr, avg_loss, '-', label='avg loss')
         plt.semilogx(lr, loss, '--', label='raw loss')
         plt.grid(True, color='0.85')
-        ax.set(title=self.model_name, ylabel='loss', xlabel='lr')
+        ax.set(title=self.model_name, ylabel='loss', xlabel='lr',
+               xlim=[min(self.lrs), max(self.lrs)], ylim=[None, self.logs['avg_loss'][0] * 2])
 
         # plot optimal min/max lrs dots
         min_max_optimal_lr = (self.min_optimal_lr, self.max_optimal_lr)
         if None not in min_max_optimal_lr:
             borders_idxs = np.isin(lr, min_max_optimal_lr).nonzero()[0]
             plt.semilogx(lr[borders_idxs], avg_loss[borders_idxs], 'o')
-            plt.vlines(lr[borders_idxs], *ax.get_ylim())
+            plt.vlines(lr[borders_idxs], *ax.get_ylim(), colors='r', linestyles='dashed')
 
         if out_mode == 'show':
             plt.show()
