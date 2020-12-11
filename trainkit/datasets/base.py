@@ -55,6 +55,9 @@ class BaseDataset(Dataset, ABC):
         Returns:
             Vector of weights
         """
+        if isinstance(targets, torch.Tensor):
+            targets = targets.numpy()
+
         count_dict = Counter(targets)
         counts = [count_dict[key] for key in range(len(count_dict))]
         counts = torch.tensor(counts, dtype=torch.float32)
