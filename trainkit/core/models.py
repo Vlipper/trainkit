@@ -40,8 +40,7 @@ class BaseOperationsMixin(ABC):
             batch: batch of data (`torch.Tensor`), may be wrapped in dict, list
 
         Returns:
-            Arbitrary dict, but it must contain key `loss_backward` with backwardable value of type
-            `torch.Tensor`
+            Arbitrary dict, but it must contain key `loss_backward` with backwardable `Tensor` value
         """
         pass
 
@@ -76,7 +75,7 @@ class BaseNet(BaseOperationsMixin, Module, ABC):
 
     def on_train_batch_end(self):
         # change lr if scheduler is cyclic
-        if (self.trainer.lr_scheduler is not None) and self.trainer.lr_scheduler.is_cyclic:
+        if self.trainer.lr_scheduler is not None and self.trainer.lr_scheduler.is_cyclic:
             self.trainer.log_writer.write_scalar('lr/train',
                                                  self.trainer.optimizer.param_groups[0]['lr'],
                                                  self.trainer.n_iter_train)
@@ -104,7 +103,7 @@ class BaseNet(BaseOperationsMixin, Module, ABC):
                                              self.trainer.epoch)
 
         # change lr if scheduler is not cyclic
-        if (self.trainer.lr_scheduler is not None) and (not self.trainer.lr_scheduler.is_cyclic):
+        if self.trainer.lr_scheduler is not None and (not self.trainer.lr_scheduler.is_cyclic):
             self.trainer.log_writer.write_scalar('lr/val',
                                                  self.trainer.optimizer.param_groups[0]['lr'],
                                                  self.trainer.epoch)
