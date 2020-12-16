@@ -2,15 +2,15 @@ import argparse
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import yaml
 from torch import device as torch_device
 
 
 class ConfCheckerMixin:
-    run_params: dict
-    hyper_params: dict
+    run_params: Optional[dict]
+    hyper_params: Optional[dict]
 
     def mod_run_params(self):
         # check and modify paths args
@@ -51,10 +51,11 @@ class ConfCheckerMixin:
     def __val_n_mod_device_arg(params: dict):
         general_params: dict = params['general']
         device_split = general_params['device'].split(':')
+        device_name = device_split[0]
 
-        if device_split[0] == 'cpu':
+        if device_name == 'cpu':
             general_params.update({'device': torch_device('cpu')})
-        elif device_split[0] == 'cuda':
+        elif device_name == 'cuda':
             os.environ['CUDA_VISIBLE_DEVICES'] = device_split[1]
             general_params.update({'device': torch_device('cuda')})
         else:
@@ -64,44 +65,95 @@ class ConfCheckerMixin:
 
 class ConfParser(ConfCheckerMixin):
     def __init__(self):
-        self.conf_filepath = self.parse_conf_filepath()
+        self.hyper_params = None
+        self.run_params = None
 
-    @staticmethod
-    def parse_conf_filepath() -> Path:
-        parser = argparse.ArgumentParser()
-        parser.add_argument('-c', '--conf_file', required=True, type=str, help='path to conf_file')
-        conf_filepath = Path(parser.parse_args().conf_file)
-
-        if conf_filepath.exists():
-            return conf_filepath
-        else:
-            raise ValueError('Path to conf_file does not exist')
-
-    def read_conf_file(self):
-        """
-        Read config file and check presence of meta-groups: run_params, hyper_params.
-        If everything is fine, write params into: self.run_params, self.hyper_params.
-        """
-        with self.conf_filepath.open('r') as file:
-            all_params = yaml.safe_load(file)
-
-        for param_group in ['run_params', 'hyper_params']:
-            if param_group not in all_params.keys():
-                raise ValueError('Group "{}" must be in config'.format(param_group))
-
-        self.run_params = all_params['run_params']
-        self.hyper_params = all_params['hyper_params']
-
-    def parse_n_valid_params(self) -> Tuple[dict, dict]:
-        """
-        Run all underwear funcs and return two dicts with run params and hyper params
+    def __call__(self) -> Tuple[dict, dict]:
+        """Runs all underwear funcs and return two dicts with run params and hyper params
 
         Returns:
             Two unnested dicts: run_params and hyper_params
         """
-        self.read_conf_file()
+        args = self.parse_args()
+        args = self.check_args(args)
+
+        if len(args.keys()) == 1:
+            conf_file_path = args['conf_file']
+            all_params = self.read_conf_file(conf_file_path)
+        else:
+            conf_file_path, modification_kwargs = args['conf_file'], args['kwargs']
+            all_params = self.read_conf_file(conf_file_path)
+            all_params = self.update_params(all_params, modification_kwargs)
+
+        self.hyper_params = all_params['hyper_params']
+        self.run_params = all_params['run_params']
 
         self.mod_run_params()
         self.mod_hyper_params()
 
         return self.run_params, self.hyper_params
+
+    @staticmethod
+    def parse_args() -> Dict[str, Any]:
+        parser = argparse.ArgumentParser()
+        parser.add_argument('-c', '--conf_file', required=True, type=Path, help='path to conf file')
+        parser.add_argument('-k', '--kwargs', type=str, nargs='*',
+                            help="kwargs with '=' as separator, which replace config's keys")
+        args = vars(parser.parse_args())
+
+        return args
+
+    @staticmethod
+    def check_args(args: dict) -> Dict[str, Any]:
+        args = args.copy()
+
+        if not args['conf_file'].exists():
+            raise ValueError('Path to "conf_file" does not exist.\n'
+                             f'Given path: "{args["conf_file"]}"')
+
+        if args['kwargs'] is None:
+            args.pop('kwargs')
+
+        return args
+
+    @staticmethod
+    def read_conf_file(conf_file_path: Path) -> Dict[str, Any]:
+        """Reads config file and checks presence of meta-groups: run_params, hyper_params.
+
+        Returns:
+            Dictionary with params
+        """
+        with conf_file_path.open('r') as file:
+            all_params = yaml.safe_load(file)
+
+        for param_group in ['run_params', 'hyper_params']:
+            if param_group not in all_params.keys():
+                raise ValueError(f'Group "{param_group}" must be in config')
+
+        return all_params
+
+    @classmethod
+    def update_params(cls, params: dict, kwargs: List[str]):
+        params = params.copy()
+
+        for key_val in kwargs:
+            key, val = key_val.split('=')
+            key_seq = key.split('/')
+            cls._update_key_val(params, key_seq, val)
+
+        return params
+
+    @staticmethod
+    def _update_key_val(params: dict, key_seq: list, val: str):
+        for key in key_seq[:-1]:
+            existed_val = params.get(key, None)
+
+            if existed_val is None:
+                params[key] = {}
+                params = params[key]
+            elif isinstance(existed_val, dict):
+                params = params[key]
+            else:
+                raise Exception('Unexpected key')  # raises when key returns real val (not dict)
+
+        params[key_seq[-1]] = yaml.safe_load(val)

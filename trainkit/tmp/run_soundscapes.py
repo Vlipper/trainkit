@@ -1,4 +1,6 @@
 import os
+os.environ['MKL_NUM_THREADS'] = '4'
+
 import string
 from collections import OrderedDict
 from functools import partial
@@ -15,7 +17,7 @@ import warnings
 warnings.filterwarnings('ignore', message='PySoundFile')
 
 
-def main(run_params: dict, hyper_params: dict):
+def setup_training(run_params: dict, hyper_params: dict):
     # define models body and head
     # _body = timm.create_model('resnet34', pretrained=True, num_classes=0)
     _embed_size = 0
@@ -112,12 +114,19 @@ def main(run_params: dict, hyper_params: dict):
     trainer.fit(train_dataset, val_dataset)
 
 
-if __name__ == '__main__':
+def parse_args():
     parser = ConfParser()
-    _run_params, _h_params = parser.parse_n_valid_params()
+    run_params, h_params = parser()
 
-    # num threads config
-    os.environ['MKL_NUM_THREADS'] = str(_run_params['general']['libs_threads'])
     # cv2.setNumThreads(_run_params['general']['libs_threads'])
 
-    main(_run_params, _h_params)
+    return run_params, h_params
+
+
+def main():
+    run_params, h_params = parse_args()
+    setup_training(run_params, h_params)
+
+
+if __name__ == '__main__':
+    main()
