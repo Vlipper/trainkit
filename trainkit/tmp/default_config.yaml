@@ -24,7 +24,6 @@ run_params:
     val_info_csv_path: 'data/mod/rand_study_split_label_pe_val_sample.csv'
     data_dir_path: 'data/mod/128x128'
     num_workers: 2
-    file_ext: 'png'
 
 hyper_params:
   general:

@@ -79,6 +79,11 @@ class LRFinder:
             else:
                 avg_loss = smooth_beta * avg_loss + (1 - smooth_beta) * batch_loss
 
+            # store values into logs
+            self.logs['lr'].append(cur_lr)
+            self.logs['avg_loss'].append(avg_loss)
+            self.logs['loss'].append(batch_loss)
+
             if is_early_stopping:
                 if self.best_avg_loss is None or self.best_avg_loss > avg_loss:
                     self.best_avg_loss = avg_loss
@@ -87,11 +92,6 @@ class LRFinder:
                     self.__early_stop_check(batch_loss, early_stopping_mult_factor)
                 except StopIteration:
                     break
-
-            # store values into logs
-            self.logs['lr'].append(cur_lr)
-            self.logs['avg_loss'].append(avg_loss)
-            self.logs['loss'].append(batch_loss)
 
         self.logs.update({key: np.array(val) for key, val in self.logs.items()})
         self.trainer.rollback_states()
