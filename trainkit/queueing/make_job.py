@@ -8,6 +8,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--conf_file', type=Path, required=True)
     parser.add_argument('-k', '--conf_kwargs', type=str, nargs='*')
+    parser.add_argument('-q', '--queue_name', type=str, required=True)
     parser.add_argument('-c', '--rq_conf', type=Path, default=Path('rq_conf.yaml'))
 
     # rq_conf_group = parser.add_mutually_exclusive_group(required=True)

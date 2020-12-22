@@ -20,6 +20,7 @@ class JobMaker:
     def __init__(self,
                  conf_file: Path,
                  url: str,
+                 queue_name: str,
                  conf_kwargs: Optional[list] = None,
                  src_path: Optional[Path] = None,
                  cache_dir_path: Optional[Path] = None,
@@ -27,7 +28,7 @@ class JobMaker:
         self.conf_string = conf_file.read_text()
         self.conf_kwargs = conf_kwargs
 
-        self.job_queue = self.get_rq_queue(url)
+        self.job_queue = self.get_rq_queue(url=url, name=queue_name)
 
         self.src_path = src_path if src_path is not None else Path('src')
 
@@ -55,9 +56,10 @@ class JobMaker:
         return new_id
 
     @staticmethod
-    def get_rq_queue(url: str):
+    def get_rq_queue(url: str,
+                     name: str):
         connection = Redis.from_url(url)
-        job_queue = Queue(connection=connection)
+        job_queue = Queue(name=name, connection=connection)
 
         return job_queue
 
