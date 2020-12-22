@@ -81,7 +81,7 @@ class PerCudaWorker(Worker):
         self.check_name(self.name)
 
     def check_name(self, name: str):
-        device_name, device_id = name.split('_')
+        device_name, device_id, worker_id = name.split('_')
 
         if device_name != 'cuda':
             raise ValueError(f'Device name must be "cuda". Given: "{device_name}"')
@@ -111,5 +111,5 @@ class PerCudaJob(Job):
     def _add_cuda_device_into_kwargs(self):
         func_args: list = self._args[0]
 
-        device_name, device_id = self.worker_name.split('_')
+        device_name, device_id, worker_id = self.worker_name.split('_')
         func_args.extend(['--kwargs', f'run_params/general/device={device_name}:{device_id}'])
