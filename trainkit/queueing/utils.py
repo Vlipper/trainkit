@@ -59,7 +59,9 @@ class JobMaker:
     def get_rq_queue(url: str,
                      name: str):
         connection = Redis.from_url(url)
-        job_queue = Queue(name=name, connection=connection)
+        job_queue = Queue(name=name,
+                          default_timeout=432000,  # 5 days (in seconds)
+                          connection=connection)
 
         return job_queue
 
