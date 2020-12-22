@@ -9,7 +9,8 @@ from .utils import PerCudaJob, PerCudaWorker, read_conf
 def parse_args() -> dict:
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--rq_conf', type=Path, default=Path('rq_conf.yaml'))
-    parser.add_argument('-n', '--name', type=str, required=True)
+    parser.add_argument('-n', '--worker_name', type=str, required=True)
+    parser.add_argument('-q', '--queue_names', type=str, required=True, action='append')
     args = vars(parser.parse_args())
 
     return args
@@ -21,8 +22,8 @@ def main():
 
     connection = Redis.from_url(conf['url'])
 
-    worker = PerCudaWorker(name=args['name'],
-                           queues=conf['queues'],
+    worker = PerCudaWorker(name=args['worker_name'],
+                           queues=args['queue_names'],
                            connection=connection,
                            job_class=PerCudaJob,
                            log_job_description=False)
