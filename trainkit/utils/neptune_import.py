@@ -73,14 +73,12 @@ def get_experiment(name: str,
             return exp
 
 
-def main(project_name,
-         hparams_dir,
-         **kwargs):
+def run(project_name: str, hparams_dir: Path, **kwargs):
     project = neptune.init(project_qualified_name=project_name)
     existed_experiments = project.get_experiments()
     existed_experiments_names = [exp.name for exp in existed_experiments]
 
-    hparams_dir_path = Path(hparams_dir).expanduser().resolve()
+    hparams_dir_path = hparams_dir.expanduser().resolve()
     if not hparams_dir_path.exists():
         raise Exception(f'Given "hparams_dir" does not exist: {str(hparams_dir_path)}')
 
@@ -103,13 +101,16 @@ def main(project_name,
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--project_name', '-p', type=str, required=True)
-    parser.add_argument('--hparams_dir', '-d', type=str, required=True)
+    parser.add_argument('-p', '--project_name', type=str, required=True)
+    parser.add_argument('-d', '--hparams_dir', type=Path, required=True)
 
     return vars(parser.parse_args())
 
 
-if __name__ == '__main__':
+def main():
     args_dict = parse_args()
+    run(**args_dict)
 
-    main(**args_dict)
+
+if __name__ == '__main__':
+    main()
