@@ -1,9 +1,13 @@
+from dotenv import load_dotenv
+load_dotenv()
+
 import argparse
 from pathlib import Path
 
 from redis import Redis
+from rq import Worker
 
-from .utils import PerCudaJob, PerCudaWorker, read_conf
+from .utils import read_conf
 
 
 def parse_args() -> dict:
@@ -21,12 +25,11 @@ def main():
     conf = read_conf(args['rq_conf'])
 
     connection = Redis.from_url(conf['url'])
+    worker = Worker(queues=args['queue_names'],
+                    name=args['worker_name'],
+                    connection=connection,
+                    log_job_description=False)
 
-    worker = PerCudaWorker(name=args['worker_name'],
-                           queues=args['queue_names'],
-                           connection=connection,
-                           job_class=PerCudaJob,
-                           log_job_description=False)
     worker.work()
 
 

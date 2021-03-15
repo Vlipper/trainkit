@@ -3,13 +3,13 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
-from pynvml import nvmlDeviceGetCount, nvmlInit, nvmlShutdown
 from redis import Redis
-from rq import Queue, Worker
-from rq.job import Job
+from rq import Queue
 
 
 def read_conf(conf_path: Path) -> dict:
+    """Reads yaml config and returns parsed dict
+    """
     with conf_path.open('r') as file:
         conf = yaml.safe_load(file)
 
@@ -32,7 +32,10 @@ class JobMaker:
 
         self.src_path = src_path if src_path is not None else Path('src')
 
-        self.cache_dir_path = cache_dir_path if cache_dir_path is not None else Path('src_cache')
+        if cache_dir_path is None:
+            self.cache_dir_path = Path(self.src_path.parent, 'src_cache')
+        else:
+            self.cache_dir_path = cache_dir_path
         if not self.cache_dir_path.exists():
             self.cache_dir_path.mkdir()
 
@@ -51,7 +54,7 @@ class JobMaker:
     @staticmethod
     def _get_dst_dir_id(cache_dir_path: Path):
         num_dirs = len(list(cache_dir_path.glob('*')))
-        new_id = f'{num_dirs:03d}'
+        new_id = f'{num_dirs:04d}'
 
         return new_id
 
@@ -75,45 +78,3 @@ class JobMaker:
             func_args.extend(self.conf_kwargs)
 
         self.job_queue.enqueue(func_path, func_args, job_id=cache_path.parts[-2])
-
-
-class PerCudaWorker(Worker):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.num_gpus = self.__get_num_gpus()
-        self.check_name(self.name)
-
-    def check_name(self, name: str):
-        device_name, device_id, worker_id = name.split('_')
-
-        if device_name != 'cuda':
-            raise ValueError(f'Device name must be "cuda". Given: "{device_name}"')
-
-        if int(device_id) >= self.num_gpus:
-            raise ValueError(f'Device id "{device_id}" must be less '
-                             f'than num gpus "{self.num_gpus}"')
-
-    @staticmethod
-    def __get_num_gpus() -> int:
-        nvmlInit()
-        num_gpus = nvmlDeviceGetCount()
-        nvmlShutdown()
-
-        return num_gpus
-
-
-class PerCudaJob(Job):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def _execute(self):
-        self._add_cuda_device_into_kwargs()
-
-        return super()._execute()
-
-    def _add_cuda_device_into_kwargs(self):
-        func_args: list = self._args[0]
-
-        device_name, device_id, worker_id = self.worker_name.split('_')
-        func_args.extend(['--kwargs', f'run_params/general/device={device_name}:{device_id}'])

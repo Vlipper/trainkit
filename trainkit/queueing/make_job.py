@@ -10,6 +10,7 @@ def parse_args():
     parser.add_argument('-k', '--conf_kwargs', type=str, nargs='*')
     parser.add_argument('-q', '--queue_name', type=str, required=True)
     parser.add_argument('-c', '--rq_conf', type=Path, default=Path('rq_conf.yaml'))
+    parser.add_argument('-s', '--src_path', type=Path, required=False)
 
     # rq_conf_group = parser.add_mutually_exclusive_group(required=True)
     # rq_conf_group.add_argument('-ru', '--redis_url', type=str)
@@ -25,8 +26,7 @@ def main():
     args_conf = read_conf(args['rq_conf'])
     args.update(args_conf)
 
-    job_maker = JobMaker(**args)
-    job_maker()
+    JobMaker(**args)()
 
 
 if __name__ == '__main__':
