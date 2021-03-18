@@ -1,19 +1,33 @@
-from dotenv import load_dotenv
-load_dotenv()
+"""Initializes and run RQ worker.
+
+Args:
+    queue_names (required): list of queue names which will be listened by initialized worker
+            Possibly to pass through --queue_names or -q.
+    worker_name (optional): worker name
+        Possibly to pass through --worker_name or -n.
+
+Examples:
+    >>> python -m trainkit.queueing.init_worker
+    >>>     -q 'small' 'big' -n 'worker_1'
+
+    >>> CUDA_VISIBLE_DEVICES=0 python -m trainkit.queueing.init_worker
+    >>>     -q 'small' 'big' -n 'worker_1'
+"""
+
+from dotenv import find_dotenv, load_dotenv
+load_dotenv(find_dotenv('.rq_worker.env', raise_error_if_not_found=True, usecwd=True))
 
 import argparse
-from pathlib import Path
+import os
 
 from redis import Redis
 from rq import Worker
-import yaml
 
 
 def parse_args() -> dict:
     parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--rq_conf', type=Path, default=Path('rq_conf.yaml'))
-    parser.add_argument('-n', '--worker_name', type=str, required=True)
-    parser.add_argument('-q', '--queue_names', type=str, required=True, action='append')
+    parser.add_argument('-q', '--queue_names', type=str, nargs='+', required=True)
+    parser.add_argument('-n', '--worker_name', type=str)
     args = vars(parser.parse_args())
 
     return args
@@ -22,10 +36,10 @@ def parse_args() -> dict:
 def main():
     args = parse_args()
 
-    with args['rq_conf'].open('r') as file:
-        conf = yaml.safe_load(file)
-
-    connection = Redis.from_url(conf['url'])
+    connection = Redis(host=os.environ['REDIS_HOST'],
+                       port=os.environ['REDIS_PORT'],
+                       db=os.environ['REDIS_DB'],
+                       password=os.environ['REDIS_PASSWORD'])
     worker = Worker(queues=args['queue_names'],
                     name=args['worker_name'],
                     connection=connection,
