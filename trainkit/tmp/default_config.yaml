@@ -1,6 +1,6 @@
 run_params:
   paths:
-    proj_root: '/home/iilegeza/projects/rsna_pulmonary_embolism'
+    project_root: '/home/iilegeza/projects/proj'
     ## all other path must be relative to proj_root
     tboard_path: 'runs/tboard_logs'
     hparam_path: 'runs/hparam_logs'

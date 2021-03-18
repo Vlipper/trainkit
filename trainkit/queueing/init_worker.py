@@ -6,8 +6,7 @@ from pathlib import Path
 
 from redis import Redis
 from rq import Worker
-
-from .utils import read_conf
+import yaml
 
 
 def parse_args() -> dict:
@@ -22,7 +21,9 @@ def parse_args() -> dict:
 
 def main():
     args = parse_args()
-    conf = read_conf(args['rq_conf'])
+
+    with args['rq_conf'].open('r') as file:
+        conf = yaml.safe_load(file)
 
     connection = Redis.from_url(conf['url'])
     worker = Worker(queues=args['queue_names'],
