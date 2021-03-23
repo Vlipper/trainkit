@@ -23,15 +23,15 @@ class JobMaker:
         self.run_params = run_params
         self.hyper_params = hyper_params
         self.proj_root_path = proj_root_path
-        self.src_path = Path(src_path)
+        self.src_path = Path(proj_root_path, src_path)
         self.func_path = func_path
 
         self.queue = self._get_queue(host, port, db, password, queue_name, queue_timeout)
-        self.cache_path = self._get_cache_path(proj_root_path, cache_path, )
+        self.cache_path = self._get_cache_path(proj_root_path, src_path, cache_path)
 
     def __call__(self):
         self.cache_path.mkdir(parents=True, exist_ok=False)
-        shutil.copytree(self.src_path, self.cache_path)
+        shutil.copytree(self.src_path, self.cache_path, dirs_exist_ok=True)
         self._enqueue_job()
 
     @staticmethod

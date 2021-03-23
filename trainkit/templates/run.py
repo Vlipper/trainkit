@@ -24,7 +24,7 @@ def main(conf: 'DictConfig'):
                              **enqueue_params)
         job_maker.__call__()
     else:
-        from setup_train import train
+        from .setup_train import train
 
         return train(run_params=run_params, hyper_params=hyper_params)
 
