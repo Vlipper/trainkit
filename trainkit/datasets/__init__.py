@@ -1,3 +1,3 @@
-from trainkit.datasets.base import BaseDataset
-from trainkit.datasets.image import ImageBaseDataset
+from .base import BaseDataset
+from .image_mixins import *
 from trainkit.datasets.audio import AudioBaseDataset
