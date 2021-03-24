@@ -8,9 +8,11 @@ Args:
 
 Examples:
     Ex.1:
+
     >>> python -m trainkit.utils.make_project_tree
 
     Ex.2:
+
     >>> python -m trainkit.utils.make_project_tree
     >>>     -c 'custom_dir1' 'custom_dir2/in_dir2_1'
 """

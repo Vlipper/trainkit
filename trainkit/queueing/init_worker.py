@@ -7,9 +7,12 @@ Args:
         Possibly to pass through --worker_name or -n.
 
 Examples:
+    Ex.1:
     >>> python -m trainkit.queueing.init_worker
     >>>     -q 'small' 'big' -n 'worker_1'
 
+    Ex.2:
+    # if you want to use only cuda:0 to execute job
     >>> CUDA_VISIBLE_DEVICES=0 python -m trainkit.queueing.init_worker
     >>>     -q 'small' 'big' -n 'worker_1'
 """
