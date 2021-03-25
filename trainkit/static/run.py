@@ -25,7 +25,7 @@ Args:
     All given args will be parsed by hydra
 """
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 load_dotenv()
 
 from typing import TYPE_CHECKING
@@ -46,6 +46,8 @@ def main(conf: 'DictConfig'):
     if enqueue_params is not None:
         from trainkit.queueing.job_maker import JobMaker
 
+        # need load_dotenv because enqueue.yaml uses interpolation of redis credentials from env vars
+        load_dotenv(find_dotenv('.rq_worker.env'))
         enqueue_params = OmegaConf.to_container(enqueue_params, resolve=True)
         job_maker = JobMaker(run_params=run_params,
                              hyper_params=hyper_params,

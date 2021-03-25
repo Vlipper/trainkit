@@ -1,0 +1,46 @@
+# @package _global_
+
+#run_params:
+#  dataset:
+#    num_workers: 10
+
+hyper_params:
+  general:
+    num_epochs: 2
+    pos_weight: 17.497
+  optimizer:
+    name: 'adamw'
+    kwargs:
+      lr: 3.0e-4
+      weight_decay: 1.0e-4
+  #      momentum: 0
+#  lr_scheduler:
+#    name: null
+#    kwargs: {}
+#      min_lr: 3.0e-4
+#      max_lr: 3.0e-4
+      # rop kwargs
+#      mode: 'min'
+#      factor: 0.5
+#      threshold: 1.0e-3
+#      threshold_mode: 'rel'
+#      patience: 4
+#      cooldown: 3
+      # clr kwargs
+#      clr_step_size_up: 2
+#      clr_step_size_down: 2
+#      mode: 'triangular2'
+#      cycle_momentum: False
+      # one_cycle kwargs
+#      step_frac_up: 0.3
+#      step_frac_down: 0.6
+#      init_lr_div_factor: 20
+#      min_lr_div_factor: 1000
+  dataset:
+    train_info_csv_path: '${run_params.paths.proj_root}data/mod/rand_split_train.csv'
+    val_info_csv_path: '${run_params.paths.proj_root}data/mod/rand_split_val.csv'
+    data_dir_path: '${run_params.paths.proj_root}data/mod/128x128/'
+    batch_size: 50
+#    mean: [0.449, 0.449, 0.449]
+#    std: [0.226, 0.226, 0.226]
+  extra: {}

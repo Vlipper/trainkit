@@ -1,0 +1,13 @@
+# @package _group_
+
+name: 'rop'
+kwargs:
+  min_lr: 3.0e-4
+  max_lr: 3.0e-4
+  # rop kwargs
+  mode: 'min'
+  factor: 0.5
+  threshold: 1.0e-3
+  threshold_mode: 'rel'
+  patience: 4
+  cooldown: 3
