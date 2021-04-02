@@ -1,6 +1,5 @@
-from setuptools import setup, find_packages
+import setuptools
 
 
-setup(name='trainkit',
-      packages=find_packages(),
-      version='0.2.16')
+if __name__ == '__main__':
+    setuptools.setup()

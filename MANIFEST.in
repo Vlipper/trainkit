@@ -1,0 +1,4 @@
+# add static files, e.g. configs and dot.env
+graft trainkit/static
+
+global-exclude *.py[co] .DS_Store
