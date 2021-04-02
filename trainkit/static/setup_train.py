@@ -31,15 +31,11 @@ def train(run_params: dict, hyper_params: dict):
     # datasets
     train_dataset = data.Dataset(
         run_params=run_params['dataset'],
-        hyper_params=hyper_params['dataset'],
-        file_path=run_params['dataset']['train_info_csv_path'],
-        img_transforms=None)
+        hyper_params=hyper_params['dataset'])
     val_dataset = data.Dataset(
         run_params=run_params['dataset'],
-        hyper_params=hyper_params['dataset'],
-        file_path=run_params['dataset']['val_info_csv_path'],
-        img_transforms=None)
-    # hyper_params['extra'].update({})
+        hyper_params=hyper_params['dataset'])
+    hyper_params['extra'].update({})
 
     # train
     trainer = Trainer(model, run_params, hyper_params)
