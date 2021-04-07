@@ -205,7 +205,7 @@ class Trainer:
         epoch_tqdm.close()
 
         if self.log_writer is not None:  # ToDo: drop this condition
-            hparams = self.hyper_params.copy()
+            hparams = {'hparams': self.hyper_params.copy()}
             results = {'best_loss': self.best_val_loss,
                        'best_metrics': self.best_val_metrics,
                        'best_loss_epoch': self.best_val_loss_epoch,
