@@ -30,8 +30,8 @@ from importlib import resources
 from pathlib import Path
 
 
-def copy_static(static_path: Path,
-                proj_root_dir: Path):
+def _copy_static(static_path: Path,
+                 proj_root_dir: Path):
     # enrich src
     proj_src_path = Path(proj_root_dir, 'src')
     proj_src_path.mkdir(mode=0o755, exist_ok=False)
@@ -81,7 +81,7 @@ def main(**kwargs):
     # copy static
     if kwargs.get('add_static'):
         with resources.path('trainkit', 'static') as static_path:
-            copy_static(static_path=static_path, proj_root_dir=root_dir)
+            _copy_static(static_path=static_path, proj_root_dir=root_dir)
 
 
 def parse_args():

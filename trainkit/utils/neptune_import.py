@@ -3,13 +3,13 @@
 Args:
     project_name: neptune's project name in format `{NAMESPACE}/{PROJECT_NAME}`.
         Possibly to pass through --project_name or -p.
-    params_dir: directory with unnested jsons with hyper parameters.
+    params_dir: directory with hyper parameters in jsons.
         Possibly to pass through --params_dir or -d.
 
 Example:
     >>> python -m trainkit.utils.neptune_import
     >>>     --project_name 'vlipper/sandbox'
-    >>>     --params_dir 'tmp2'
+    >>>     --params_dir './'
 """
 
 import argparse
@@ -37,7 +37,6 @@ def run_neptune(project_name: str,
 
         with params_file_path.open('r') as file:
             params = json.load(file)
-        # if 'results' not in set([key.split('/', 1)[0] for key in params.keys()]):
         if 'results' not in params.keys():
             continue
 
