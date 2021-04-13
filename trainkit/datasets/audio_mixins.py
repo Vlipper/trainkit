@@ -22,9 +22,6 @@ class AudioBaseOperationsMixin(ABC):
     def __init__(self, run_params: dict,
                  hyper_params: dict,
                  **_ignored):
-        super().__init__(run_params=run_params,
-                         hyper_params=hyper_params,
-                         **_ignored)
 
         self.audio_sr = hyper_params['audio_sr']
 
@@ -99,9 +96,6 @@ class AudioSpectrogramMixin(ABC):
     def __init__(self, run_params: dict,
                  hyper_params: dict,
                  **_ignored):
-        super().__init__(run_params=run_params,
-                         hyper_params=hyper_params,
-                         **_ignored)
 
         self.audio_sr = hyper_params['audio_sr']
         self.spec_kws = hyper_params['spec_kws']

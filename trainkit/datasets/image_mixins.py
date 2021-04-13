@@ -87,9 +87,6 @@ class ImageScalingMixin(ABC):
     def __init__(self, run_params: dict,
                  hyper_params: dict,
                  **_ignored):
-        super().__init__(run_params=run_params,
-                         hyper_params=hyper_params,
-                         **_ignored)
 
         if hyper_params.get('mean') is not None and hyper_params.get('std') is not None:
             self.mean, self.std = hyper_params['mean'], hyper_params['std']
@@ -212,9 +209,6 @@ class ImageMixingMixin(ABC):
     def __init__(self, run_params: dict,
                  hyper_params: dict,
                  **_ignored):
-        super().__init__(run_params=run_params,
-                         hyper_params=hyper_params,
-                         **_ignored)
 
         self.mixup_weights = hyper_params['mixup_weights']
 
@@ -251,9 +245,6 @@ class ImageTransformMixin(ABC):
                  hyper_params: dict,
                  albu_transforms: 'Compose' = None,
                  **_ignored):
-        super().__init__(run_params=run_params,
-                         hyper_params=hyper_params,
-                         **_ignored)
 
         self.albu_transforms = albu_transforms
 

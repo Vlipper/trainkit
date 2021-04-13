@@ -13,7 +13,6 @@ class BaseDataset(Dataset, ABC):
     def __init__(self, run_params: dict,
                  hyper_params: dict,
                  **_ignored):
-        super().__init__(**_ignored)
 
         self.batch_size = hyper_params['batch_size']
         self.num_workers = run_params['num_workers']
