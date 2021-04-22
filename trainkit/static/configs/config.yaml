@@ -1,6 +1,6 @@
 defaults:
   - run_params: default
-  - hyper_params/lr_scheduler: null
+  - hyper_params/lr_scheduler: none
   - hydra/launcher: rq
 
 hydra:
