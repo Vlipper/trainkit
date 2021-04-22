@@ -36,9 +36,17 @@ def _copy_static(static_path: Path,
     proj_src_path = Path(proj_root_dir, 'src')
     proj_src_path.mkdir(mode=0o755, exist_ok=False)
 
+    ## copy templates
     shutil.copy2(Path(static_path, 'run.py'), proj_src_path)
     shutil.copy2(Path(static_path, 'setup_train.py'), proj_src_path)
     shutil.copy2(Path(static_path, '.env'), proj_src_path)
+    shutil.copy2(Path(static_path, 'eda.ipynb'), Path(proj_root_dir, 'notebooks'))
+
+    ## create *.py dummies in src
+    src_utils_path = Path(proj_src_path, 'utils')
+    src_utils_path.mkdir(mode=0o755, exist_ok=False)
+    for file_name in ['data', 'models', 'utils']:
+        Path(src_utils_path, f'{file_name}.py').touch(mode=0o755, exist_ok=False)
 
     # enrich configs
     shutil.copytree(Path(static_path, 'configs'),
