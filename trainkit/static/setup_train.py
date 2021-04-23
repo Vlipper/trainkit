@@ -3,6 +3,7 @@ from collections import OrderedDict
 from trainkit import Trainer
 import timm
 import torch.nn as nn
+from torch.utils.data import DataLoader
 
 from .utils import data, models, utils
 
@@ -35,8 +36,19 @@ def train(run_params: dict, hyper_params: dict):
     val_dataset = data.Dataset(
         run_params=run_params['dataset'],
         hyper_params=hyper_params['dataset'])
+
+    train_loader = DataLoader(dataset=train_dataset,
+                              batch_size=hyper_params['dataset']['batch_size'],
+                              shuffle=True,
+                              num_workers=run_params['dataset']['num_workers'],
+                              persistent_workers=True)
+    val_loader = DataLoader(dataset=val_dataset,
+                            batch_size=hyper_params['dataset']['batch_size'],
+                            shuffle=False,
+                            num_workers=run_params['dataset']['num_workers'],
+                            persistent_workers=True)
     hyper_params['extra'].update({})
 
     # train
     trainer = Trainer(model, run_params, hyper_params)
-    trainer.fit(train_dataset, val_dataset)
+    trainer.fit(train_loader, val_loader)

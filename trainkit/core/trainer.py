@@ -2,7 +2,7 @@ import gc
 import sys
 from copy import deepcopy
 from pathlib import Path
-from typing import Callable, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 import torch
 from tqdm import tqdm
@@ -12,18 +12,14 @@ from trainkit.core.lr_finder import LRFinder
 from trainkit.utils.trainer_utils import LRSchedulerFactory, OptimizerFactory
 
 if TYPE_CHECKING:
+    from typing import Callable, Optional
     from trainkit.core.models import BaseNet
-    from trainkit.datasets.base import BaseDataset
     from torch.utils.data import DataLoader
-
-# from tensorboard.backend.event_processing import event_accumulator
 
 
 class Trainer:
-    log_writer: Optional[LogWriter]
-    train_dataset: 'BaseDataset'
+    log_writer: 'Optional[LogWriter]'
     train_loader: 'DataLoader'
-    val_dataset: 'BaseDataset'
     val_loader: 'DataLoader'
 
     def __init__(self, model: 'BaseNet',
@@ -50,24 +46,23 @@ class Trainer:
         self.find_lr_params = run_params['find_lr']
 
         # define optimizer and cache
-        self.optimizer = OptimizerFactory.get_optimizer(model,
-                                                        hyper_params['optimizer']['name'],
-                                                        hyper_params['optimizer']['kwargs'])
+        self.optimizer = OptimizerFactory.get_optimizer(
+            model,
+            hyper_params['optimizer']['name'],
+            hyper_params['optimizer']['kwargs'])
         self.cache = self.cache_states()
 
         # skeleton vars
         self.epoch, self.n_iter_train = 0, 0
         self.batches_per_epoch = None
         self.lr_scheduler = None
-        # self.train_dataset, self.val_dataset = None, None
-        # self.train_loader, self.val_loader = None, None
         self.val_loss, self.val_metrics = None, None
-        self.best_val_loss = 10000
-        self.best_val_metrics = 10000 if run_params['general']['metrics_comparison_mode'] == 'min' else -10000
+        self.best_val_loss = 1e5
+        self.best_val_metrics = 1e5 if run_params['general']['metrics_comparison_mode'] == 'min' else -1e5
         self.best_val_loss_epoch, self.best_val_metrics_epoch = None, None
         self.log_writer = None
 
-    def run_find_lr(self) -> None:
+    def run_find_lr(self):
         """
         Run find learning rate process, find optimal lr borders and save/plot figure.
         If `apply_optim_borders_flag` in config is True, then calc and apply optimal lr and
@@ -113,15 +108,14 @@ class Trainer:
         """
         self.hyper_params['optimizer']['kwargs'].update({'lr': new_lr})
 
-        self.optimizer = OptimizerFactory.get_optimizer(self.model,
-                                                        self.hyper_params['optimizer']['name'],
-                                                        self.hyper_params['optimizer']['kwargs'])
+        self.optimizer = OptimizerFactory.get_optimizer(
+            self.model,
+            self.hyper_params['optimizer']['name'],
+            self.hyper_params['optimizer']['kwargs'])
 
         self.cache.update({'optimizer_state': deepcopy(self.optimizer.state_dict())})
 
     def pretrain_routine(self):
-        self.train_loader = self.train_dataset.get_dataloader(is_val=False)
-        self.val_loader = self.val_dataset.get_dataloader(is_val=True)
         self.model.train_preps(self)
 
         if self.is_find_lr:
@@ -140,8 +134,9 @@ class Trainer:
                                     model_name=self.model_name)
         self.log_writer.write_hparams(self.hyper_params)
 
-    def fit(self, train_dataset: 'BaseDataset', val_dataset: 'BaseDataset'):
-        self.train_dataset, self.val_dataset = train_dataset, val_dataset
+    def fit(self, train_loader: 'DataLoader',
+            val_loader: 'DataLoader'):
+        self.train_loader, self.val_loader = train_loader, val_loader
         self.pretrain_routine()
 
         epoch_tqdm = tqdm(total=self.num_epochs, desc='epochs', leave=True)
@@ -215,7 +210,7 @@ class Trainer:
             self.log_writer.write_hparams(hparams=hparams)
             self.log_writer.close()
 
-    def optim_wrapper(self, train_step: Callable) -> Callable:
+    def optim_wrapper(self, train_step: 'Callable') -> 'Callable':
         """
         Decorator for model step with zero_grad, backward, optimizer step
 
