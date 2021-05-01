@@ -1,13 +1,10 @@
 defaults:
   - run_params: default
   - hyper_params/lr_scheduler: none
-  - hydra/launcher: rq
+#  - hydra/launcher: rq
 
 hydra:
   run:
-    dir: ${run_params.paths.proj_root}runs/hydra/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: '${run_params.paths.proj_root}runs/hydra/outputs/${now:%Y-%m-%d}/${now:%H-%M-%S}'
   sweep:
-    dir: ${run_params.paths.proj_root}runs/hydra/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}
-  launcher:
-    queue: small
-    stop_after_enqueue: True
+    dir: '${run_params.paths.proj_root}runs/hydra/multirun/${now:%Y-%m-%d}/${now:%H-%M-%S}'

@@ -12,14 +12,20 @@ Examples:
     >>> python -m mnist.src.run +experiments=exp0
 
     Ex.2:
-    enqueues job into own RQ with overwritten queue name.
+    copy current `src` directory into `src_cache` and manually enqueues job into RQ with overwritten queue name.
 
-    >>> python -m mnist.src.run +experiments=exp0 +run_params/enqueue=enqueue enqueue.queue_name=big
+    >>> python -m mnist.src.run +experiments=exp0 +run_params/enqueue=rq_custom enqueue.queue_name=big
 
     Ex.3:
-    makes two jobs with different configs: exp0, exp1 and send them into launcher, 'big' queue.
+    makes two jobs with different configs: exp0, exp1 and send them into launcher with overwritten queue name.
 
-    >>> python -m mnist.src.run -m +experiments=exp0,exp1 hydra.launcher.queue=big
+    >>> python -m mnist.src.run -m +experiments=exp0,exp1 hydra/launcher=rq
+        +run_params/enqueue=rq_plugin hydra.launcher.queue=big
+
+    Ex.4:
+    it is possible to make only one job and send into launcher
+
+    >>> python -m mnist.src.run -m +experiments=exp0 hydra/launcher=rq +run_params/enqueue=rq_plugin
 
 Args:
     All given args will be parsed by hydra
@@ -27,6 +33,7 @@ Args:
 
 from dotenv import load_dotenv, find_dotenv
 load_dotenv()
+load_dotenv(find_dotenv('.rq_worker.env'))  # needed for interpolation of redis credentials from env vars
 
 from typing import TYPE_CHECKING
 
@@ -46,8 +53,6 @@ def main(conf: 'DictConfig'):
     if enqueue_params is not None:
         from trainkit.queueing.job_maker import JobMaker
 
-        # need load_dotenv because enqueue.yaml uses interpolation of redis credentials from env vars
-        load_dotenv(find_dotenv('.rq_worker.env'))
         enqueue_params = OmegaConf.to_container(enqueue_params, resolve=True)
         job_maker = JobMaker(run_params=run_params,
                              hyper_params=hyper_params,
