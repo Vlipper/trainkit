@@ -1,19 +1,19 @@
 from pathlib import Path
-from typing import Dict, Optional, TYPE_CHECKING, Tuple, Union
+from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
 if TYPE_CHECKING:
+    from typing import Dict, Optional, Tuple, Union
     from torch import Tensor
     from torch.utils.data import DataLoader
     from trainkit.core.trainer import Trainer
 
 
 class LRFinder:
-    """
-    LRFinder.
+    """LRFinder
 
     Args:
         trainer: Trainer instance
@@ -22,7 +22,7 @@ class LRFinder:
         num_lrs: number of learning rates to check
         **_ignored: ignored kwargs storage
     """
-    logs: Dict[str, Union[list, np.ndarray]]
+    logs: 'Dict[str, Union[list, np.ndarray]]'
 
     def __init__(self, trainer: 'Trainer',
                  min_lr: float = 1e-7,
@@ -114,7 +114,7 @@ class LRFinder:
                                 min_right_seq_len: int = 2,
                                 min_decreasing_gain: float = 0.999,
                                 min_increasing_gain: float = 1,
-                                **_ignored) -> Tuple[float, float]:
+                                **_ignored) -> 'Tuple[float, float]':
         """Finds left and right borders of learning rate where loss decreasing.
 
         Args:
@@ -243,7 +243,7 @@ class LRFinder:
         return border_idx
 
     def plot(self, out_mode: str,
-             logs_path: Optional[Path] = None,
+             logs_path: 'Optional[Path]' = None,
              **_ignored):
         """Plots figure with lr range test results (axes: lr, loss)
 
@@ -263,7 +263,8 @@ class LRFinder:
         plt.semilogx(lr, loss, '--', label='raw loss')
         plt.grid(True, color='0.85')
         ax.set(title=self.model_name, ylabel='loss', xlabel='lr',
-               xlim=[min(self.lrs), max(self.lrs)], ylim=[None, self.logs['avg_loss'][0] * 2])
+               xlim=[min(self.lrs), max(self.lrs)])
+        # , ylim=[None, self.logs['avg_loss'][0] * 2]
 
         # plot optimal min/max lrs dots
         min_max_optimal_lr = (self.min_optimal_lr, self.max_optimal_lr)
@@ -282,7 +283,7 @@ class LRFinder:
         else:
             raise Exception('Param "out_mode" must be "show" or "save"')
 
-    def run(self, **kwargs) -> Tuple[float, float]:
+    def run(self, **kwargs) -> 'Tuple[float, float]':
         """
         Run range test, plot lr-loss figure, try to find optimal lr range, update lr-loss figure
 

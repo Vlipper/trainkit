@@ -16,7 +16,7 @@ class OptimizerFactory:
         elif optimizer_name == 'adamw':
             optimizer = AdamW(model.parameters(), **optimizer_kwargs)
         else:
-            raise ValueError('Given optimizer_name: "{}" is not known'.format(optimizer_name))
+            raise ValueError(f"Given 'optimizer_name': '{optimizer_name}' is not known")
 
         return optimizer
 
@@ -40,7 +40,7 @@ class LRSchedulerFactory:
         elif lr_scheduler_name == 'cst_onecycle':
             lr_scheduler = cls.__get_cst_onecycle_scheduler(optimizer=optimizer, **kwargs)
         else:
-            raise ValueError(f'Given lr_scheduler_name: "{lr_scheduler_name}" is not known')
+            raise ValueError(f"Given 'lr_scheduler_name': '{lr_scheduler_name}', is not known")
 
         return lr_scheduler
 
