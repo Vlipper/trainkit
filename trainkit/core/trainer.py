@@ -1,6 +1,7 @@
 import gc
 import sys
 from copy import deepcopy
+from math import inf
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -30,16 +31,20 @@ class Trainer:
         self.hyper_params = hyper_params
 
         # paths params
-        self.models_dir_path = run_params['paths']['models_path']
-        self.tboard_dir_path = run_params['paths']['tboard_path']
-        self.hparam_dir_path = run_params['paths']['hparam_path']
+        self.models_dir_path = run_params['paths'].get('models_path')
+        self.tboard_dir_path = run_params['paths'].get('tboard_path')
+        self.hparam_dir_path = run_params['paths'].get('hparam_path')
 
         # general params
-        self.model_name = run_params['general']['model_name']
         self.device = run_params['general']['device']
+        self.model_name = run_params['general']['model_name']
         self.num_epochs = hyper_params['general']['num_epochs']
+        self.clip_grad_norm_max = hyper_params['general'].get('clip_grad_norm_max')
+        self.clip_grad_norm_type = hyper_params['general'].get('clip_grad_norm_type')
+        self.metrics_comp_mode = run_params['general']['metrics_comparison_mode']
         self.save_last_state = run_params['general']['save_last_state']
         self.save_best_state = run_params['general']['save_best_state']
+        self.save_logs = run_params['general']['save_logs']
 
         # find lr params
         self.is_find_lr = run_params['find_lr']['is_flr']
@@ -57,8 +62,8 @@ class Trainer:
         self.batches_per_epoch = None
         self.lr_scheduler = None
         self.val_loss, self.val_metrics = None, None
-        self.best_val_loss = 1e5
-        self.best_val_metrics = 1e5 if run_params['general']['metrics_comparison_mode'] == 'min' else -1e5
+        self.best_val_loss = inf
+        self.best_val_metrics = inf if self.metrics_comp_mode == 'min' else -inf
         self.best_val_loss_epoch, self.best_val_metrics_epoch = None, None
         self.log_writer = None
 
@@ -121,7 +126,7 @@ class Trainer:
         if self.is_find_lr:
             self.run_find_lr()
 
-        self.batches_per_epoch = len(self.train_loader)  # is needed for cyclic schedulers
+        self.batches_per_epoch = len(self.train_loader)  # it is needed for cyclic schedulers
         self.lr_scheduler = LRSchedulerFactory.get_scheduler(
             optimizer=self.optimizer,
             num_epochs=self.num_epochs,
@@ -129,10 +134,11 @@ class Trainer:
             lr_scheduler_name=self.hyper_params['lr_scheduler']['name'],
             lr_scheduler_kwargs=self.hyper_params['lr_scheduler']['kwargs'])
 
-        self.log_writer = LogWriter(tboard_dir_path=self.tboard_dir_path,
-                                    hparam_dir_path=self.hparam_dir_path,
-                                    model_name=self.model_name)
-        self.log_writer.write_hparams(self.hyper_params)
+        if self.save_logs:
+            self.log_writer = LogWriter(tboard_dir_path=self.tboard_dir_path,
+                                        hparam_dir_path=self.hparam_dir_path,
+                                        model_name=self.model_name)
+            self.log_writer.write_hparams(self.hyper_params)
 
     def fit(self, train_loader: 'DataLoader',
             val_loader: 'DataLoader'):
@@ -161,6 +167,16 @@ class Trainer:
                     self.model.batch_step(batch_idx, batch)
             self.model.on_val_part_end()
 
+            # update best loss and metrics
+            if self.val_loss < self.best_val_loss:
+                self.best_val_loss = self.val_loss
+                self.best_val_loss_epoch = self.epoch
+
+            new_metrics_better = self._is_new_metrics_better()
+            if new_metrics_better:
+                self.best_val_metrics = self.val_metrics
+                self.best_val_metrics_epoch = self.epoch
+
             # save states
             if self.save_last_state or self.save_best_state:
                 if self.lr_scheduler is not None:
@@ -173,33 +189,18 @@ class Trainer:
 
                 # save last state
                 if self.save_last_state:
-                    save_path = Path(self.models_dir_path, self.model_name + '_last_state.pth')
+                    save_path = Path(self.models_dir_path, f'{self.model_name}_last.pth')
                     self.save_states(save_path, **save_kw)
 
                 # save best state
-                if self.run_params['general']['metrics_comparison_mode'] == 'min':
-                    is_new_metrics_better = (self.val_metrics < self.best_val_metrics)
-                elif self.run_params['general']['metrics_comparison_mode'] == 'max':
-                    is_new_metrics_better = (self.val_metrics > self.best_val_metrics)
-                else:
-                    raise ValueError("Param 'metrics_comparison_mode' must be one of: 'min', 'max'")
-
-                if self.save_best_state and is_new_metrics_better:
-                    self.best_val_metrics = self.val_metrics
-                    self.best_val_metrics_epoch = self.epoch
-
-                    save_path = Path(self.models_dir_path, self.model_name + '_best_metrics_state.pth')
+                if self.save_best_state and new_metrics_better:
+                    save_path = Path(self.models_dir_path, f'{self.model_name}_best_metrics.pth')
                     self.save_states(save_path, **save_kw)
-
-                # save best val loss
-                if self.val_loss < self.best_val_loss:
-                    self.best_val_loss = self.val_loss
-                    self.best_val_loss_epoch = self.epoch
 
             epoch_tqdm.update()
         epoch_tqdm.close()
 
-        if self.log_writer is not None:  # ToDo: drop this condition
+        if self.log_writer is not None:
             hparams = {'hparams': self.hyper_params.copy()}
             results = {'best_loss': self.best_val_loss,
                        'best_metrics': self.best_val_metrics,
@@ -225,11 +226,26 @@ class Trainer:
             out = train_step(*args, **kwargs)
             batch_loss = out['loss_backward']
             batch_loss.backward()
+            if self.clip_grad_norm_max and self.clip_grad_norm_type:
+                _ = torch.nn.utils.clip_grad_norm_(parameters=self.model.parameters(),
+                                                   max_norm=self.clip_grad_norm_max,
+                                                   norm_type=self.clip_grad_norm_type)
             self.optimizer.step()
 
             return batch_loss.item()
 
         return wrapper
+
+    def _is_new_metrics_better(self) -> bool:
+        if self.metrics_comp_mode == 'min':
+            new_metrics_better = self.val_metrics < self.best_val_metrics
+        elif self.metrics_comp_mode == 'max':
+            new_metrics_better = self.val_metrics > self.best_val_metrics
+        else:
+            raise ValueError("Param 'metrics_comparison_mode' must be 'min' or 'max'. "
+                             f"Given value: '{self.metrics_comp_mode}'")
+
+        return new_metrics_better
 
     def save_states(self, save_path: Path, **kwargs):
         state_dict = {'epoch': self.epoch,
