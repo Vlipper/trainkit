@@ -1,0 +1,9 @@
+name: 'clr'
+kwargs:
+  min_lr: 3.0e-4
+  max_lr: 3.0e-4
+  # clr kwargs
+  clr_step_size_up: 2
+  clr_step_size_down: 2
+  mode: 'triangular2'
+  cycle_momentum: False

@@ -1,0 +1,28 @@
+general:
+  proj_name: 'tests'
+  model_name: '${now:%y-%m-%d_%H-%M-%S}'
+  device: 'cpu'
+  save_logs: False
+  save_last_state: False
+  save_best_state: False
+  metrics_comparison_mode: 'max'
+paths:
+  proj_root: './'
+  tboard_path: '${.proj_root}runs/tboard_logs/'
+  hparam_path: '${.proj_root}runs/hparam_logs/'
+  models_path: '${.proj_root}runs/models/'
+find_lr:
+  is_flr: False
+  is_flr_only: False
+  apply_optim_borders_flag: False
+  kwargs:
+    out_mode: 'save'
+    logs_path: '${run_params.paths.proj_root}runs/find_lr'
+dataset:
+  num_workers: 2
+  n_samples: 50000
+  noise_level: 0.12
+  rand_seed: 42
+sampler:
+  rand_seed: ${run_params.dataset.rand_seed}
+  shuffle: True

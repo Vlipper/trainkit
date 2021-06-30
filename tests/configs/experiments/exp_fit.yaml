@@ -1,0 +1,17 @@
+# @package _global_
+
+hyper_params:
+  general:
+    num_epochs: 10
+  optimizer:
+    name: 'sgd'
+    kwargs:
+      lr: 3.0e-4
+      weight_decay: 2.0e-5
+      momentum: 0.9
+  dataset:
+    batch_size: 64
+  sampler:
+    val_share: 0.2
+    epoch_shuffle_train: True
+  extra: {}
