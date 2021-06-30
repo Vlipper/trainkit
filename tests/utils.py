@@ -75,14 +75,14 @@ class TwoMoonsModel(BaseNet):
 
         # calc loss
         if batch_idx == 0:
-            self.batch_obj_losses, self.batch_obj_metrics = [], []
-        self.batch_obj_losses.append(batch_loss.detach().cpu().item())
+            self.batch_losses, self.batch_metrics = [], []
+        self.batch_losses.append(batch_loss.detach().cpu().item())
 
         # calc metrics
         _, preds = logits.detach().max(dim=1)
         correct = (preds == targets).sum().item()
         accuracy = correct / len(targets)
-        self.batch_obj_metrics.append(accuracy)
+        self.batch_metrics.append(accuracy)
 
         return {'loss_backward': batch_loss}
 

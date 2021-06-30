@@ -5,9 +5,10 @@ import numpy as np
 from torch.nn import Module
 
 if TYPE_CHECKING:
-    from typing import Any, Dict
-    from trainkit.core.trainer import Trainer
+    from typing import Any, Callable, Dict, Optional
     import torch
+    from torch import Tensor
+    from trainkit.core.trainer import Trainer
 
 
 class BaseOperationsMixin(ABC):
@@ -17,10 +18,10 @@ class BaseOperationsMixin(ABC):
 
     @abstractmethod
     def batch_step(self, batch_idx: int,
-                   batch: 'Any') -> 'Dict[str, torch.Tensor]':
+                   batch: 'Any') -> 'Dict[str, Tensor]':
         """
         Method receives batch (dataloaders' unmodified output on CPU) and its index.
-        It must calc loss/metrics and save them into lists: batch_obj_losses, batch_obj_metrics.
+        It must calc loss/metrics and save them into lists: batch_losses, batch_metrics.
 
         Example:
             Output may looks like below.
@@ -30,9 +31,9 @@ class BaseOperationsMixin(ABC):
             >>> batch_loss = losses.mean()
 
             >>> if batch_idx == 0:
-            >>>     self.batch_obj_losses, self.batch_obj_metrics = [], []
-            >>> self.batch_obj_losses.extend(losses)
-            >>> self.batch_obj_metrics.extend(metrics)
+            >>>     self.batch_losses, self.batch_metrics = [], []
+            >>> self.batch_losses.extend(losses)
+            >>> self.batch_metrics.extend(metrics)
             >>> out = {'loss_backward': batch_loss}
 
             >>> return out
@@ -63,14 +64,25 @@ class BaseNet(BaseOperationsMixin,
               Module,
               ABC):
     trainer: 'Trainer'
-    batch_obj_losses: list
-    batch_obj_metrics: list
+    batch_losses: list
+    batch_metrics: list
 
     def __init__(self, device: 'torch.device',
+                 loss_agg_fn: 'Optional[Callable[[list], float]]' = None,
+                 metrics_agg_fn: 'Optional[Callable[[list], float]]' = None,
                  **_ignored):
+        """
+
+        Args:
+            device: torch.device to use model on it
+            loss_agg_fn: function to aggregate batch_losses list, which may extend at `batch_step`
+            metrics_agg_fn: function to aggregate batch_metrics list, which may extend at `batch_step`
+        """
         super().__init__()
 
         self.device = device
+        self.loss_agg_fn = lambda x: np.mean(x).item() if loss_agg_fn is None else loss_agg_fn
+        self.metrics_agg_fn = lambda x: np.mean(x).item() if metrics_agg_fn is None else metrics_agg_fn
 
     def train_preps(self, trainer: 'Trainer'):
         self.trainer = trainer
@@ -90,16 +102,16 @@ class BaseNet(BaseOperationsMixin,
         # write mean values over batches into logs
         if self.trainer.log_writer is not None:
             self.trainer.log_writer.write_scalar('losses/train',
-                                                 np.mean(self.batch_obj_losses).item(),
+                                                 self.loss_agg_fn(self.batch_losses),
                                                  self.trainer.epoch)
             self.trainer.log_writer.write_scalar('metrics/train',
-                                                 np.mean(self.batch_obj_metrics).item(),
+                                                 self.metrics_agg_fn(self.batch_metrics),
                                                  self.trainer.epoch)
 
     def on_val_part_end(self):
         # write mean values over batches into logs
-        self.trainer.val_loss = np.mean(self.batch_obj_losses).item()
-        self.trainer.val_metrics = np.mean(self.batch_obj_metrics).item()
+        self.trainer.val_loss = self.loss_agg_fn(self.batch_losses)
+        self.trainer.val_metrics = self.metrics_agg_fn(self.batch_metrics)
 
         if self.trainer.log_writer is not None:
             self.trainer.log_writer.write_scalar('losses/val',
