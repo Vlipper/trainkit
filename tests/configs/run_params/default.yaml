@@ -19,7 +19,7 @@ find_lr:
     out_mode: 'save'
     logs_path: '${run_params.paths.proj_root}runs/find_lr'
 dataset:
-  num_workers: 2
+  num_workers: 0
   n_samples: 50000
   noise_level: 0.12
   rand_seed: 42

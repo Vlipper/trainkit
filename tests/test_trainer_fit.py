@@ -25,13 +25,11 @@ def test_model_fit():
     train_loader = DataLoader(dataset=dataset,
                               batch_size=hyper_params['dataset']['batch_size'],
                               sampler=train_sampler,
-                              num_workers=run_params['dataset']['num_workers'],
-                              persistent_workers=True)
+                              num_workers=run_params['dataset']['num_workers'])
     val_loader = DataLoader(dataset=dataset,
                             batch_size=hyper_params['dataset']['batch_size'],
                             sampler=val_sampler,
-                            num_workers=run_params['dataset']['num_workers'],
-                            persistent_workers=True)
+                            num_workers=run_params['dataset']['num_workers'])
 
     trainer = Trainer(model, run_params, hyper_params)
     trainer.fit(train_loader, val_loader)
