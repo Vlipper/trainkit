@@ -8,6 +8,8 @@ hyper_params:
   general:
     num_epochs: 2
     pos_weight: 17.497
+    clip_grad_norm_max: 4.0
+    clip_grad_norm_type: 2.0
   optimizer:
     name: 'adamw'
     kwargs:

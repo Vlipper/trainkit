@@ -1,5 +1,3 @@
-# @package _group_
-
 name: 'clr'
 kwargs:
   min_lr: 3.0e-4

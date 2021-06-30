@@ -1,5 +1,3 @@
-# @package _group_
-
 name: 'rop'
 kwargs:
   min_lr: 3.0e-4
