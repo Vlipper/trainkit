@@ -88,6 +88,9 @@ class AudioBaseOperationsMixin(ABC):
 
         return audio_padded
 
+    # ToDo add method _truncate_or_pad to specified size
+    #   left_pad_samples, right_pad_samples -- make default value as 0
+
 
 class AudioSpectrogramMixin(ABC):
     """Mixin with spectrogram mining operations

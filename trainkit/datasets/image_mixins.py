@@ -1,3 +1,4 @@
+import random
 from abc import ABC
 from typing import TYPE_CHECKING
 
@@ -5,7 +6,7 @@ import cv2
 import numpy as np
 
 if TYPE_CHECKING:
-    from typing import List, Tuple, Union
+    from typing import List, Optional, Tuple, Union
     from pathlib import Path
     from albumentations import Compose
     from numpy import ndarray
@@ -24,25 +25,44 @@ class ImageBaseOperationsMixin(ABC):
     """
 
     @staticmethod
-    def _read_img(img_path: 'Path') -> 'ndarray':
-        img = cv2.imread(str(img_path.resolve()))  # shape: (H, W, 3(BGR))
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # shape: (H, W, 3(RGB))
-        img = img.astype(np.float32)
+    def _read_img(img_path: 'Path',
+                  imread_flag: 'Optional[int]' = None,
+                  color_flag: 'Optional[int]' = cv2.COLOR_BGR2RGB,
+                  out_dtype: 'Optional[np.dtype]' = np.float32) -> 'ndarray':
+        """Reads image and convert color/dtype with OpenCV
+
+        Args:
+            img_path: Path to image file
+            imread_flag: flag argument for cv2.imread() function.
+                By OpenCV default is cv2.IMREAD_COLOR, which means that every image will have shape [H, W, 3(BGR)].
+                You can use cv2.IMREAD_UNCHANGED if want to read image as is
+            color_flag: flag argument for cv2.cvtColor() function. Skipped if None.
+                By default image channels will be converted from BGR to RGB order
+            out_dtype: out image data type. Skipped if None
+
+        Returns:
+            Loaded image
+        """
+        img = cv2.imread(str(img_path.resolve()), imread_flag)
+        if color_flag is not None:
+            img = cv2.cvtColor(img, color_flag)
+        if out_dtype is not None:
+            img = img.astype(out_dtype)
 
         return img
 
     @staticmethod
     def _reorder_img_axes(img: 'ndarray',
-                          axes_order: 'Tuple[int, ...]') -> 'ndarray':
+                          axes_order: 'Tuple[int, ...]' = (2, 0, 1)) -> 'ndarray':
         """Reorders axes in given `img` array
 
         Example:
             Reorder image in HWC format to CHW
 
-            >>> img = np.random.randint(low=0, high=255, size=(64, 64, 3))
+            >>> img = np.random.randint(low=0, high=255, size=(32, 64, 3))
             >>> img_mod = self._reorder_img_axes(img, axes_order=(2, 0, 1))
             >>> img_mod.shape
-            (3, 12, 12)
+            (3, 32, 64)
 
         Args:
             img: input image
@@ -61,7 +81,7 @@ class ImageBaseOperationsMixin(ABC):
         """Adds new shape at the end of `img` array and stack it `channels_out` times
 
         Args:
-            img: input image with expected shape: (H, W)
+            img: input image with shape (H, W)
             channels_out: number of channels to add
 
         Returns:
@@ -73,6 +93,70 @@ class ImageBaseOperationsMixin(ABC):
             img_mod = img_mod.repeat(channels_out, -1)  # shape: (H, W, channels_out)
 
         return img_mod
+
+    @staticmethod
+    def _resize_img(img: 'ndarray',
+                    sizes: 'Optional[Tuple[int, int]]' = None,
+                    aspect_ratio: 'Optional[float]' = None) -> 'ndarray':
+        """Resizes image to given `aspect_ratio` or `sizes`
+
+        Args:
+            img: image to resize
+            sizes: tuple with ints (new_height, new_width)
+            aspect_ratio: target aspect ratio.
+                If img has different aspect ratio, it will be randomly padded by zeros up to given aspect_ratio
+
+        Returns:
+            Resized image
+        """
+        if sizes is None and aspect_ratio is None:
+            raise ValueError('One of "sizes" or "aspect_ratio" must be given')
+
+        if aspect_ratio is not None:
+            img_h, img_w = img.shape[:2]
+            img_aspect_ratio = img_h / img_w
+
+            if img_aspect_ratio > aspect_ratio:
+                new_w = int(img_h / aspect_ratio)
+                w_diff = new_w - img_w
+
+                if w_diff > 1:
+                    left_pad_size = random.choice(range(1, w_diff + 1))
+                    right_pad_size = w_diff - left_pad_size
+                    img = cv2.copyMakeBorder(img, top=0, bottom=0,
+                                             left=left_pad_size, right=right_pad_size,
+                                             borderType=cv2.BORDER_CONSTANT, value=0)
+
+            elif img_aspect_ratio < aspect_ratio:
+                new_h = int(img_w * aspect_ratio)
+                h_diff = new_h - img_h
+
+                if h_diff > 1:
+                    top_pad_size = random.choice(range(1, h_diff + 1))
+                    bottom_pad_size = h_diff - top_pad_size
+                    img = cv2.copyMakeBorder(img, top=top_pad_size, bottom=bottom_pad_size,
+                                             left=0, right=0,
+                                             borderType=cv2.BORDER_CONSTANT, value=0)
+
+        if sizes is not None:
+            new_h, new_w = sizes
+            img = cv2.resize(img, (new_w, new_h))
+
+        return img
+
+    # from torch.utils.data import get_worker_info
+    # from numpy.random import Generator
+    # @staticmethod
+    # def __get_np_rng() -> 'Optional[Generator]':
+    #     worker_info = get_worker_info()
+    #
+    #     if worker_info is not None:
+    #         worker_seed = worker_info.seed
+    #         np_rng = np.random.default_rng(worker_seed)
+    #     else:
+    #         np_rng = None
+    #
+    #     return np_rng
 
 
 class ImageScalingMixin(ABC):
