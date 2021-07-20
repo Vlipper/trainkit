@@ -1,17 +1,13 @@
 name: Tests
 
-on: [push, pull_request]
-#  pull_request:
-#    branches:
-#      - master
+on:
+  pull_request:
+    branches:
+      - master
 
 jobs:
   tests:
     runs-on: ubuntu-latest
-
-    # Not intended for forks.
-#    if: github.repository == 'optuna/optuna'
-
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -32,7 +28,7 @@ jobs:
         -f https://download.pytorch.org/whl/torch_stable.html
 
     - name: Install package
-      run: pip install --progress-bar off ./
+      run: pip install --progress-bar off .[tests]  # possible to write : `pip install .[ext1,ext2]`
 
-    - name: Run PyTest
+    - name: Run pytest
       run: pytest
