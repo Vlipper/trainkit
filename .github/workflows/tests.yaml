@@ -17,6 +17,9 @@ jobs:
       with:
         python-version: ~3.8
 
+    - name: Fix for librosa
+      run: apt update && sudo apt-get install libsndfile1
+
     - name: Install pip
       run: |
         python -m pip install --upgrade pip
