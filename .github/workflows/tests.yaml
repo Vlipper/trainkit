@@ -1,6 +1,7 @@
 name: Tests
 
 on:
+  push: {}
   pull_request:
     branches:
       - master
@@ -17,7 +18,7 @@ jobs:
       with:
         python-version: ~3.8
 
-    - name: Fix for librosa
+    - name: Dependency update for librosa
       run: sudo apt update && sudo apt-get install libsndfile1
 
     - name: Install pip
