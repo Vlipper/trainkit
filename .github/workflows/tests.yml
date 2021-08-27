@@ -1,6 +1,7 @@
 name: Tests
 
 on:
+  workflow_dispatch: {}
   pull_request:
     branches:
       - master
@@ -26,9 +27,7 @@ jobs:
         pip install --progress-bar off -U setuptools
 
     - name: Install PyTorch (CPU only)
-      run : >
-        pip install torch==1.9.0+cpu
-        -f https://download.pytorch.org/whl/torch_stable.html
+      run : pip install torch==1.9.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
 
     - name: Install package
       run: pip install --progress-bar off .[tests]  # possible to write : `pip install .[ext1,ext2]`
