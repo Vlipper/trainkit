@@ -1,0 +1,16 @@
+branches:
+  - name: master
+    prerelease: preview
+plugins:
+  - '@semantic-release/commit-analyzer'
+  - '@semantic-release/release-notes-generator'
+  - '@semantic-release/changelog'
+  - - '@semantic-release/exec'
+    - prepareCmd: >
+        python -m build -w
+        && python ./release/version_update.py -f ./trainkit/__init__.py -v ${nextRelease.version}
+  - - '@semantic-release/git'
+    - assets: [CHANGELOG.md, trainkit/__init__.py]
+  - - '@semantic-release/github'
+    - assets: ['dist/*.whl']
+preset: conventionalcommits
