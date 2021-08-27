@@ -2,4 +2,4 @@ from trainkit.core.trainer import Trainer
 from trainkit.core.models import BaseNet
 
 
-__version__ = '0.2.20'
+__version__ = '1.0.0-preview.1'
