@@ -8,8 +8,8 @@ plugins:
   - '@semantic-release/changelog'
   - - '@semantic-release/exec'
     - prepareCmd: >
-        python -m build -w
-        && python ./release/update_version.py -f ./trainkit/__init__.py -v ${nextRelease.version}
+        python ./release/update_version.py -f ./trainkit/__init__.py -v ${nextRelease.version}
+        && python -m build -w
   - - '@semantic-release/git'
     - assets: [CHANGELOG.md, trainkit/__init__.py]
   - - '@semantic-release/github'
