@@ -1,4 +1,5 @@
 branches:
+  - name: release
   - name: master
     prerelease: preview
 plugins:
@@ -8,7 +9,7 @@ plugins:
   - - '@semantic-release/exec'
     - prepareCmd: >
         python -m build -w
-        && python ./release/version_update.py -f ./trainkit/__init__.py -v ${nextRelease.version}
+        && python ./release/update_version.py -f ./trainkit/__init__.py -v ${nextRelease.version}
   - - '@semantic-release/git'
     - assets: [CHANGELOG.md, trainkit/__init__.py]
   - - '@semantic-release/github'
