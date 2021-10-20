@@ -68,16 +68,12 @@ class Trainer:
         self.log_writer = None
 
     def run_find_lr(self):
-        """
-        Run find learning rate process, find optimal lr borders and save/plot figure.
-        If `apply_optim_borders_flag` in config is True, then calc and apply optimal lr and
-        update min/max borders into lr scheduler kwargs.
+        """Runs LR range test (find LR) and finds optimal lr.
+
+        If `apply_optim_borders_flag` value in config is `True`, then optimal LR will be applied.
         """
         lr_finder = LRFinder(trainer=self, **self.find_lr_params['kwargs'])
-        min_lr, max_lr = lr_finder.run(**self.find_lr_params['kwargs'])
-
-        optimal_lr = self._calc_optimal_lr(min_lr, max_lr)
-        print('min/max/optimal LRs: {:.2e}, {:.2e}, {:.2e}'.format(min_lr, max_lr, optimal_lr))
+        min_lr, max_lr, optimal_lr = lr_finder(**self.find_lr_params['kwargs'])
 
         if self.find_lr_params['is_flr_only']:
             sys.exit()
