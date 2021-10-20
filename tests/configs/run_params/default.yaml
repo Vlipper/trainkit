@@ -7,16 +7,16 @@ general:
   metrics_comparison_mode: 'max'
 paths:
   proj_root: './'
-  tboard_path: '${.proj_root}runs/tboard_logs/'
-  hparam_path: '${.proj_root}runs/hparam_logs/'
-  models_path: '${.proj_root}runs/models/'
+  tboard_path: ???
+  hparam_path: ???
+  models_path: ???
 find_lr:
   is_flr: False
   is_flr_only: False
   apply_optim_borders_flag: False
   kwargs:
-    out_mode: 'save'
-    logs_path: '${run_params.paths.proj_root}runs/find_lr'
+    num_lrs: 203
+    check_early_stopping: False
 dataset:
   num_workers: 0
   n_samples: 50000
