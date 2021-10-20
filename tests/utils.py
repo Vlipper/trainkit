@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from sklearn.datasets import make_moons
-import torch
 from torch import nn
 from torch.utils.data import Sampler
 
@@ -12,7 +11,7 @@ from trainkit.core.models import BaseNet
 
 if TYPE_CHECKING:
     from numpy import ndarray
-    from torch import Tensor
+    from torch import Tensor, device
     from typing import Any, Dict, Literal, Optional, Tuple
 
 
@@ -45,7 +44,7 @@ class TwoMoonsDataset(BaseDataset):
 
 
 class TwoMoonsModel(BaseNet):
-    def __init__(self, device: 'torch.device',
+    def __init__(self, device: 'device',
                  **_ignored):
         super().__init__(device, **_ignored)
 
