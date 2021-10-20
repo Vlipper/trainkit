@@ -7,9 +7,9 @@ general:
   metrics_comparison_mode: 'max'
 paths:
   proj_root: '/home/iilegeza/projects/${run_params.general.proj_name}/'
-  tboard_path: '${run_params.paths.proj_root}runs/tboard_logs/'
-  hparam_path: '${run_params.paths.proj_root}runs/hparam_logs/'
-  models_path: '${run_params.paths.proj_root}runs/models/'
+  tboard_path: '${.proj_root}runs/tboard_logs/'
+  hparam_path: '${.proj_root}runs/hparam_logs/'
+  models_path: '${.proj_root}runs/models/'
 find_lr:
   is_flr: True
   is_flr_only: True
