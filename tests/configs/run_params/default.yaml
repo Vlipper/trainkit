@@ -2,7 +2,6 @@ general:
   proj_name: 'tests'
   model_name: '${now:%y-%m-%d_%H-%M-%S}'
   device: 'cpu'
-  save_logs: False
   save_last_state: False
   save_best_state: False
   metrics_comparison_mode: 'max'

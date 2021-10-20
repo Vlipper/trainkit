@@ -2,7 +2,6 @@ general:
   proj_name: ???
   model_name: '${now:%y-%m-%d_%H-%M-%S}'
   device: 'cuda'
-  save_logs: False
   save_last_state: True
   save_best_state: True
   metrics_comparison_mode: 'max'
