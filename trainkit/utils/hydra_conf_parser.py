@@ -13,7 +13,11 @@ class HydraConfigModder:
         self.hyper_params = None
 
     def __call__(self, config: 'DictConfig') -> 'Tuple[dict, dict]':
-        self.run_params: dict = OmegaConf.to_container(config['run_params'], resolve=True)
-        self.hyper_params: dict = OmegaConf.to_container(config['hyper_params'], resolve=True)
+        self.run_params: dict = OmegaConf.to_container(config['run_params'],
+                                                       resolve=True,
+                                                       throw_on_missing=True)
+        self.hyper_params: dict = OmegaConf.to_container(config['hyper_params'],
+                                                         resolve=True,
+                                                         throw_on_missing=True)
 
         return self.run_params, self.hyper_params

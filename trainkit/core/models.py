@@ -8,6 +8,7 @@ if TYPE_CHECKING:
     from typing import Any, Callable, Dict, Optional
     import torch
     from torch import Tensor
+    from torch.utils.tensorboard import SummaryWriter
     from trainkit.core.trainer import Trainer
 
 
@@ -64,6 +65,7 @@ class BaseNet(BaseOperationsMixin,
               Module,
               ABC):
     trainer: 'Trainer'
+    tb_writer: 'SummaryWriter'
     batch_losses: list
     batch_metrics: list
 
@@ -86,45 +88,42 @@ class BaseNet(BaseOperationsMixin,
 
     def train_preps(self, trainer: 'Trainer'):
         self.trainer = trainer
+        self.tb_writer = trainer.log_writer.tb_writer
         self.to(self.device)
         self.train()
 
     def on_train_batch_end(self):
         # change lr if scheduler is cyclic
         if self.trainer.lr_scheduler is not None and self.trainer.lr_scheduler.is_cyclic:
-            if self.trainer.log_writer is not None:
-                self.trainer.log_writer.write_scalar('lr/train',
-                                                     self.trainer.optimizer.param_groups[0]['lr'],
-                                                     self.trainer.n_iter_train)
+            self.tb_writer.add_scalar('lr/train',
+                                      self.trainer.optimizer.param_groups[0]['lr'],
+                                      self.trainer.n_iter_train)
             self.trainer.lr_scheduler.step()
 
     def on_train_part_end(self):
         # write mean values over batches into logs
-        if self.trainer.log_writer is not None:
-            self.trainer.log_writer.write_scalar('losses/train',
-                                                 self.loss_agg_fn(self.batch_losses),
-                                                 self.trainer.epoch)
-            self.trainer.log_writer.write_scalar('metrics/train',
-                                                 self.metrics_agg_fn(self.batch_metrics),
-                                                 self.trainer.epoch)
+        self.tb_writer.add_scalar('losses/train',
+                                    self.loss_agg_fn(self.batch_losses),
+                                    self.trainer.epoch)
+        self.tb_writer.add_scalar('metrics/train',
+                                    self.metrics_agg_fn(self.batch_metrics),
+                                    self.trainer.epoch)
 
     def on_val_part_end(self):
         # write mean values over batches into logs
         self.trainer.val_loss = self.loss_agg_fn(self.batch_losses)
         self.trainer.val_metrics = self.metrics_agg_fn(self.batch_metrics)
 
-        if self.trainer.log_writer is not None:
-            self.trainer.log_writer.write_scalar('losses/val',
-                                                 self.trainer.val_loss,
-                                                 self.trainer.epoch)
-            self.trainer.log_writer.write_scalar('metrics/val',
-                                                 self.trainer.val_metrics,
-                                                 self.trainer.epoch)
+        self.tb_writer.add_scalar('losses/val',
+                                  self.trainer.val_loss,
+                                  self.trainer.epoch)
+        self.tb_writer.add_scalar('metrics/val',
+                                  self.trainer.val_metrics,
+                                  self.trainer.epoch)
 
         # change lr if scheduler is not cyclic
         if self.trainer.lr_scheduler is not None and (not self.trainer.lr_scheduler.is_cyclic):
-            if self.trainer.log_writer is not None:
-                self.trainer.log_writer.write_scalar('lr/val',
-                                                     self.trainer.optimizer.param_groups[0]['lr'],
-                                                     self.trainer.epoch)
+            self.tb_writer.add_scalar('lr/val',
+                                      self.trainer.optimizer.param_groups[0]['lr'],
+                                      self.trainer.epoch)
             self.trainer.lr_scheduler.step(self.trainer.val_loss)

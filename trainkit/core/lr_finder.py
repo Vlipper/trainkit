@@ -1,15 +1,17 @@
-from pathlib import Path
+import logging
 from typing import TYPE_CHECKING
 
-import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
 
 if TYPE_CHECKING:
-    from typing import Dict, Optional, Tuple, Union
+    from typing import Dict, Tuple, Union
+
     from torch import Tensor
     from torch.utils.data import DataLoader
     from trainkit.core.trainer import Trainer
+
+_logger = logging.getLogger(__name__)
 
 
 class LRFinder:
@@ -32,89 +34,101 @@ class LRFinder:
         self.trainer = trainer
         self.model = trainer.model
         self.optimizer = trainer.optimizer
-        self.model_name = self.trainer.model_name
-        self.dataloader = ContinuousIterDataLoader(trainer.train_loader)
-        self.num_lrs = num_lrs
+        self.model_name = trainer.model_name
+        self.data_loader = ContinuousDataLoader(trainer.train_loader)
+        self.tb_writer = trainer.log_writer.tb_writer
 
         # vars for range_test
         self.lrs = np.geomspace(start=min_lr, stop=max_lr, num=num_lrs)
-        self.logs = {'lr': [], 'loss': [], 'avg_loss': []}
+        self.logs = {'lr': [], 'loss': [], 'smooth_loss': []}
         self.min_optimal_lr, self.max_optimal_lr = None, None
-        self.best_avg_loss = None
+        self.best_smooth_loss = None
 
     def range_test(self, smooth_beta: float = 0.8,
-                   is_early_stopping: bool = True,
+                   check_early_stopping: bool = True,
                    early_stopping_mult_factor: float = 3,
                    **_ignored):
-        """
-        Train model by iterating over continuous version of `trainer.train_loader`
-        with applying new learning rate from `self.lrs` before every batch.
-        After every batch step it calculates smoothed loss (`avg_loss`) and store into logs:
-        lr, loss, avg_loss
+        """Runs learning rate range test.
+
+        Trains model on data from given `DataLoader` with applying new learning rate before every
+        batch. After every batch step it calculates smoothed loss and stores logs into `self.logs`.
+        Smoothed loss formula looks like this:
+        `smooth_beta * smooth_loss + (1 - smooth_beta) * batch_loss`.
 
         Args:
-            smooth_beta: coefficient for smoothed loss calculation:
-                `avg_loss = smooth_beta * avg_loss + (1 - smooth_beta) * batch_loss`
-            is_early_stopping: check loss explosion and stop training
-            early_stopping_mult_factor: multiplier value in which times current batch loss
-                must be bigger than best smoothed loss to raise `StopIteration`
+            smooth_beta: coefficient at previous value of smooth loss
+            check_early_stopping: checks loss explosion and necessity of training break
+            early_stopping_mult_factor: multiplier value, can be explained as "in how many times
+                current batch loss must be bigger than best smoothed loss to raise `StopIteration`"
             **_ignored: ignored kwargs storage
         """
-        avg_loss = None
+        smooth_loss = None
         self.model.train()
 
-        for iter_step in tqdm(range(self.num_lrs), desc='finding LR', total=self.num_lrs):
+        for iter_step, lr in enumerate(tqdm(self.lrs, desc='finding LR')):
             # apply new lr
-            cur_lr = self.lrs[iter_step]
             for param_group in self.optimizer.param_groups:
-                param_group['lr'] = cur_lr
+                param_group['lr'] = lr
+            _logger.info('Next LR applied. Step: %d | lr: %.2e', iter_step, lr)
 
             # train step
-            batch = next(self.dataloader)
+            batch = next(self.data_loader)
             batch_loss = self.trainer.optim_wrapper(self.model.batch_step)(iter_step, batch)
 
             # calculate smoothed loss
             if iter_step == 0:
-                avg_loss = batch_loss
+                smooth_loss = batch_loss
             else:
-                avg_loss = smooth_beta * avg_loss + (1 - smooth_beta) * batch_loss
+                smooth_loss = smooth_beta * smooth_loss + (1 - smooth_beta) * batch_loss
 
-            # store values into logs
-            self.logs['lr'].append(cur_lr)
-            self.logs['avg_loss'].append(avg_loss)
+            # store logs
+            self.logs['lr'].append(lr)
             self.logs['loss'].append(batch_loss)
+            self.logs['smooth_loss'].append(smooth_loss)
+            self.tb_writer.add_scalar('lr-rt/lr', lr, iter_step)
+            self.tb_writer.add_scalar('lr-rt/loss', batch_loss, iter_step)
+            self.tb_writer.add_scalar('lr-rt/smooth-loss', smooth_loss, iter_step)
 
-            if is_early_stopping:
-                if self.best_avg_loss is None or self.best_avg_loss > avg_loss:
-                    self.best_avg_loss = avg_loss
+            if check_early_stopping:
+                if self.best_smooth_loss is None or self.best_smooth_loss > smooth_loss:
+                    self.best_smooth_loss = smooth_loss
 
                 try:
-                    self.__early_stop_check(batch_loss, early_stopping_mult_factor)
+                    self.__early_stopping_check(batch_loss, early_stopping_mult_factor)
                 except StopIteration:
+                    _logger.info('LR range test was early stopped at lr: %.2e', lr)
                     break
 
+        # add lr-rt scalars on one layout
+        layout = {'lr-rt': {'loss': ['Multiline', ['lr-rt/loss', 'lr-rt/lr']],
+                            'smooth-loss': ['Multiline', ['lr-rt/smooth-loss', 'lr-rt/lr']]}}
+        self.tb_writer.add_custom_scalars(layout)
+
+        self.tb_writer.flush()
         self.logs.update({key: np.array(val) for key, val in self.logs.items()})
         self.trainer.rollback_states()
 
-    def __early_stop_check(self, current_loss: float,
-                           early_stopping_mult_factor: float):
+    def __early_stopping_check(self, current_loss: float,
+                               early_stopping_mult_factor: float):
         """Checks early stopping condition.
-
-        In current version it raises `StopIteration` if current batch loss is greater than
-        best smoothed batch loss in `early_stopping_mult_factor` times.
 
         Args:
             current_loss: loss value of current batch
+            early_stopping_mult_factor: multiplicative factor of best smooth loss when it compared
+                with current batch loss
 
+        Raises:
+            StopIteration: Raised when current batch loss is greater than best smoothed batch loss
+                in `early_stopping_mult_factor` times.
         """
-        if current_loss > (early_stopping_mult_factor * self.best_avg_loss):
+        if current_loss > (early_stopping_mult_factor * self.best_smooth_loss):
             raise StopIteration
 
-    def find_optimal_lr_borders(self, min_left_seq_len: int = 5,
-                                min_right_seq_len: int = 2,
-                                min_decreasing_gain: float = 0.999,
-                                min_increasing_gain: float = 1,
-                                **_ignored) -> 'Tuple[float, float]':
+    def _find_optimal_lr_borders(self, min_left_seq_len: int = 5,
+                                 min_right_seq_len: int = 2,
+                                 min_decreasing_gain: float = 0.999,
+                                 min_increasing_gain: float = 1,
+                                 **_ignored) -> 'Tuple[float, float]':
         """Finds left and right borders of learning rate where loss decreasing.
 
         Args:
@@ -132,29 +146,30 @@ class LRFinder:
             Tuple with two min and max learning rates
         """
         if len(self.logs['lr']) == 0:
-            raise Exception('You must run range_test before')
+            raise Exception('You must run range test before: range_test()')
 
-        min_optimal_lr_idx = self._find_left_lr_border_idx(self.logs['avg_loss'],
+        min_optimal_lr_idx = self._find_left_lr_border_idx(self.logs['smooth_loss'],
                                                            min_decreasing_gain,
                                                            min_left_seq_len)
-        max_optimal_lr_idx = self._find_right_lr_border_idx(self.logs['avg_loss'],
+        max_optimal_lr_idx = self._find_right_lr_border_idx(self.logs['smooth_loss'],
                                                             min_increasing_gain,
                                                             min_right_seq_len,
                                                             min_optimal_lr_idx)
 
         self.min_optimal_lr = self.logs['lr'][min_optimal_lr_idx]
         self.max_optimal_lr = self.logs['lr'][max_optimal_lr_idx]
+        _logger.info('Optimal LR border was found. Selected min/max LRs: %.2e | %.2e',
+                     self.min_optimal_lr, self.max_optimal_lr)
 
         return self.min_optimal_lr, self.max_optimal_lr
 
-    @classmethod
-    def _find_left_lr_border_idx(cls, avg_losses: np.ndarray,
+    def _find_left_lr_border_idx(self, smooth_losses: np.ndarray,
                                  min_decreasing_gain: float,
                                  min_decreasing_sequence_len: int) -> int:
-        """Finds left border of optimal learning rate range
+        """Finds left border of optimal learning rate range.
 
         Args:
-            avg_losses: smoothed loss array
+            smooth_losses: smoothed loss array
             min_decreasing_gain: minimum ratio of current loss to previous loss which defined
                 as a loss decreasing event
             min_decreasing_sequence_len: minimum number of loss decreasing events in a row
@@ -168,26 +183,25 @@ class LRFinder:
         if min_decreasing_sequence_len < 1:
             raise ValueError('Param "min_decreasing_sequence_len" must be strictly more than 0')
 
-        avg_loss_gains = avg_losses[1:] / avg_losses[:-1]
-        gains_less_threshold_idxs = (avg_loss_gains <= min_decreasing_gain).nonzero()[0]
+        smooth_loss_gains = smooth_losses[1:] / smooth_losses[:-1]
+        gains_less_threshold_idxs = (smooth_loss_gains <= min_decreasing_gain).nonzero()[0]
 
-        left_border_idx = cls.__find_monotony(gains_less_threshold_idxs, min_decreasing_sequence_len)
-
+        left_border_idx = self.__find_monotony(gains_less_threshold_idxs,
+                                               min_decreasing_sequence_len)
         if left_border_idx is None:
             raise Exception('Left learning rate border was not found')
-        else:
-            left_border_idx += 1  # add one to choose first lr after loss starts decreasing
-            return left_border_idx
 
-    @classmethod
-    def _find_right_lr_border_idx(cls, avg_losses: np.ndarray,
+        left_border_idx += 1  # add one to choose first lr after loss starts decreasing
+        return left_border_idx
+
+    def _find_right_lr_border_idx(self, smooth_losses: np.ndarray,
                                   min_increasing_gain: float,
                                   min_increasing_sequence_len: int,
                                   left_border_idx: int) -> int:
-        """Finds right border of optimal learning rate range
+        """Finds right border of optimal learning rate range.
 
         Args:
-            avg_losses: smoothed loss array
+            smooth_losses: smoothed loss array
             min_increasing_gain: minimum ratio of current loss to previous loss which defined
                 as a loss increasing event
             min_increasing_sequence_len: minimum number of loss increasing events in a row
@@ -202,22 +216,23 @@ class LRFinder:
         if min_increasing_sequence_len < 1:
             raise ValueError('Param "min_increasing_sequence_len" must be strictly more than 0')
 
-        avg_losses_after_left_border = avg_losses[(left_border_idx+1):]
-        avg_loss_gains = avg_losses_after_left_border[1:] / avg_losses_after_left_border[:-1]
-        gains_more_threshold_idxs = (avg_loss_gains >= min_increasing_gain).nonzero()[0]
+        smooth_losses_after_left_border = smooth_losses[(left_border_idx + 1):]
+        smooth_loss_gains = smooth_losses_after_left_border[1:] \
+            / smooth_losses_after_left_border[:-1]
+        gains_more_threshold_idxs = (smooth_loss_gains >= min_increasing_gain).nonzero()[0]
 
-        right_border_idx = cls.__find_monotony(gains_more_threshold_idxs, min_increasing_sequence_len)
-
+        right_border_idx = self.__find_monotony(gains_more_threshold_idxs,
+                                                min_increasing_sequence_len)
         if right_border_idx is None:
             raise Exception('Right learning rate border was not found')
-        else:
-            right_border_idx += (left_border_idx + 1)  # add one because of indexing starts from 0
-            return right_border_idx
+
+        right_border_idx += (left_border_idx + 1)  # add one because of indexing starts from 0
+        return right_border_idx
 
     @staticmethod
     def __find_monotony(gains_over_threshold_idxs: np.ndarray,
                         min_sequence_len: int) -> int:
-        """Finds index of element from which loss began to change monotonically
+        """Finds index of element from which loss began to change monotonically.
 
         Args:
             gains_over_threshold_idxs: array with indices where ratio of current loss to
@@ -242,73 +257,47 @@ class LRFinder:
 
         return border_idx
 
-    def plot(self, out_mode: str,
-             logs_path: 'Optional[Path]' = None,
-             **_ignored):
-        """Plots figure with lr range test results (axes: lr, loss)
+    @staticmethod
+    def _find_optimal_lr(min_lr: float,
+                         max_lr: float) -> float:
+        """Calculates optimal learning rate between given min and max borders.
 
         Args:
-            out_mode: "save" or "show" lr-loss figure
-            logs_path: path to save plot
-            **_ignored: ignored kwargs storage
-        """
-        if len(self.logs['lr']) == 0:
-            raise Exception('You must run range_test before')
-
-        loss, avg_loss, lr = [self.logs[i] for i in ('loss', 'avg_loss', 'lr')]
-
-        # plot loss-lr figure
-        fig, ax = plt.subplots(figsize=(8, 5))
-        plt.semilogx(lr, avg_loss, '-', label='avg loss')
-        plt.semilogx(lr, loss, '--', label='raw loss')
-        plt.grid(True, color='0.85')
-        ax.set(title=self.model_name, ylabel='loss', xlabel='lr',
-               xlim=[min(self.lrs), max(self.lrs)])
-        # , ylim=[None, self.logs['avg_loss'][0] * 2]
-
-        # plot optimal min/max lrs dots
-        min_max_optimal_lr = (self.min_optimal_lr, self.max_optimal_lr)
-        if None not in min_max_optimal_lr:
-            borders_idxs = np.isin(lr, min_max_optimal_lr).nonzero()[0]
-            plt.semilogx(lr[borders_idxs], avg_loss[borders_idxs], 'o')
-            plt.vlines(lr[borders_idxs], *ax.get_ylim(), colors='r', linestyles='dashed')
-
-        if out_mode == 'show':
-            plt.show()
-        elif out_mode == 'save':
-            if logs_path is None:
-                raise ValueError('Param "logs_path" must be given to save figure')
-
-            plt.savefig(Path(logs_path, '{}.png'.format(self.model_name)))
-        else:
-            raise Exception('Param "out_mode" must be "show" or "save"')
-
-    def run(self, **kwargs) -> 'Tuple[float, float]':
-        """
-        Run range test, plot lr-loss figure, try to find optimal lr range, update lr-loss figure
-
-        Args:
-            **kwargs: dict, which sent into kwargs in all used LRFinder methods
+            min_lr: minimal LR border
+            max_lr: maximum LR border
 
         Returns:
-            Tuple with two min and max learning rates
+            'Optimal' LR between min and max borders
+        """
+        optimal_lr = min_lr + 0.5 * (max_lr - min_lr)
+        _logger.info('Optimal LR was selected as %.2e', optimal_lr)
+
+        return optimal_lr
+
+    def __call__(self, **kwargs) -> 'Tuple[float, float, float]':
+        """Runs LR range test and tries to find borders of optimal lr.
+
+        Args:
+            **kwargs: dict, which used as kwargs in all LRFinder methods
+
+        Returns:
+            Min/max borders of optimal lr and one median value of optimal lr
         """
         self.range_test(**kwargs)
-        self.plot(**kwargs)
+        min_lr, max_lr = self._find_optimal_lr_borders(**kwargs)
+        optimal_lr = self._find_optimal_lr(min_lr, max_lr)
 
-        min_lr, max_lr = self.find_optimal_lr_borders(**kwargs)
-        self.plot(**kwargs)
-
-        return min_lr, max_lr
+        return min_lr, max_lr, optimal_lr
 
 
-class ContinuousIterDataLoader:
-    """
-    A wrapper for continuous iterating over given `data_loader`.
-    If `StopIteration` exception is raised than DataLoader will be automatically reseted.
+class ContinuousDataLoader:
+    """A wrapper which continuously iterates over given `DataLoader` instance.
+
+    It iterates until `StopIteration` exception raised. After that wrapper reset given `DataLoader`
+    and continue iteration.
 
     Args:
-        data_loader: DataLoader to continuously iterate over it
+        data_loader: `DataLoader` instance
     """
     def __init__(self, data_loader: 'DataLoader'):
         self.data_loader = data_loader
