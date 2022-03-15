@@ -10,27 +10,22 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v2
 
-    - name: Setup Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: ~3.8
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ~3.8
 
-    - name: Fix for librosa
-      run: sudo apt update && sudo apt-get install libsndfile1
+      - name: Install librosa (soundfile) dependency
+        run: sudo apt update && sudo apt-get install libsndfile1
 
-    - name: Install pip
-      run: |
-        python -m pip install --upgrade pip
-        pip install --progress-bar off -U setuptools
+      - name: Install pip
+        run: python -m pip install --upgrade --progress-bar off pip setuptools
 
-    - name: Install PyTorch (CPU only)
-      run : pip install torch==1.9.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+      - name: Install package
+        run: pip install --progress-bar off .[all] # possible to write : `pip install .[ext1,ext2]`
 
-    - name: Install package
-      run: pip install --progress-bar off .[tests]  # possible to write : `pip install .[ext1,ext2]`
-
-    - name: Run pytest
-      run: pytest
+      - name: Run pytest
+        run: pytest
