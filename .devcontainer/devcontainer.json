@@ -1,0 +1,28 @@
+// docs: https://code.visualstudio.com/docs/remote/devcontainerjson-reference#_scenario-specific-properties
+{
+	"name": "trainkit",
+	"build": {
+		"dockerfile": "Dockerfile",
+		"context": ".."
+	},
+	"mounts": [
+		"type=volume,src=vscode-extensions,dst=/root/.vscode-server/extensions"
+	],
+	"workspaceMount": "type=bind,src=${localWorkspaceFolder},dst=/workspace",
+	"workspaceFolder": "/workspace",
+	"extensions": [
+		"eamodio.gitlens",
+		"kevinrose.vsc-python-indent",
+		"mhutchie.git-graph",
+		"ms-azuretools.vscode-docker",
+		"ms-python.python",
+		"ms-python.vscode-pylance",
+		"njpwerner.autodocstring",
+		"redhat.vscode-yaml",
+		"streetsidesoftware.code-spell-checker-russian",
+		"streetsidesoftware.code-spell-checker",
+		"tamasfe.even-better-toml",
+		"visualstudioexptteam.vscodeintellicode",
+		"vivaxy.vscode-conventional-commits"
+	]
+}
