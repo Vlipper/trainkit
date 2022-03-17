@@ -10,9 +10,9 @@ plugins:
     - prepareCmd: >
         python ./release/update_version.py -f ./pyproject.toml -v ${nextRelease.version}
         && python ./release/update_version.py -f ./trainkit/__init__.py -v ${nextRelease.version}
-        && python -m build -w
+        && $HOME/.local/bin/poetry build -f wheel
   - - '@semantic-release/git'
-    - assets: [CHANGELOG.md, trainkit/__init__.py]
+    - assets: [CHANGELOG.md, pyproject.toml, trainkit/__init__.py]
   - - '@semantic-release/github'
     - assets: ['dist/*.whl']
 preset: conventionalcommits
