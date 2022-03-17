@@ -1,0 +1,37 @@
+name: trainkit
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  # python's
+  - python ~=3.8.0
+  - pip
+  - ipykernel # needed for adding kernels into jupyter
+  # - ipywidgets # needed for catboost plots
+  # code helpers
+  - black ~=22.1.0
+  - pydocstyle ~=6.1.1
+  - pylint ~=2.12.2
+  # general
+  - anaconda::redis ~=5.0.3
+  - redis-py ~=4.1.4 # python client for redis (pypi: redis)
+  - rq >=1.9.0,<1.11.0
+  - hydra-core ~=1.1.1
+  - python-dotenv ~=0.19.2
+  - tqdm ~=4.63.0
+  # ds
+  - cudatoolkit ~=11.3.0
+  - pytorch::pytorch ~=1.11.0
+  - numpy ~=1.21.5
+  - scikit-learn ~=1.0.2
+  - scipy ~=1.8.0
+  - tensorboard ~=2.8.0
+  # image specific
+  - albumentations >=1.0.3,<1.2.0
+  - opencv ~=4.5.0
+  # audio specific
+  - librosa ~=0.9.1
+  # other
+  # neptune-client ~=0.15.1
+  # - pip:
+  #   - hydra-rq-launcher
