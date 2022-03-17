@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "trainkit"
-version = "1.0.0-preview.2"
+version = "1.0.0-preview.3"
 description = ""
 authors = ["Ignat Legeza <ign.legeza@gmail.com>"]
 repository = "https://github.com/vlipper/trainkit"

@@ -1,3 +1,10 @@
+## [1.0.0-preview.3](https://github.com/Vlipper/trainkit/compare/v1.0.0-preview.2...v1.0.0-preview.3) (2022-03-17)
+
+
+### Features
+
+* Add conda environment file with freezed versions ([c5f367b](https://github.com/Vlipper/trainkit/commit/c5f367b46d163f14dd3addb7647c357827f8e42e))
+
 ## [1.0.0-preview.2](https://github.com/Vlipper/trainkit/compare/v1.0.0-preview.1...v1.0.0-preview.2) (2021-10-20)
 
 
